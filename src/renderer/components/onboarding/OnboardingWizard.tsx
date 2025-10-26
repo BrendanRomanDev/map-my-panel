@@ -19,6 +19,7 @@ export type OnboardingData = {
   }>
   panelName: string
   totalPositions: number
+  mainBreakerAmperage: number
 }
 
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
@@ -27,7 +28,8 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     rooms: [],
     entities: [],
     panelName: 'Main Panel',
-    totalPositions: 24
+    totalPositions: 24,
+    mainBreakerAmperage: 200
   })
 
   const updateData = (updates: Partial<OnboardingData>) => {
@@ -87,8 +89,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             <Step3ConfigurePanel
               panelName={data.panelName}
               totalPositions={data.totalPositions}
-              onUpdate={(panelName, totalPositions) =>
-                updateData({ panelName, totalPositions })
+              mainBreakerAmperage={data.mainBreakerAmperage}
+              onUpdate={(panelName, totalPositions, mainBreakerAmperage) =>
+                updateData({ panelName, totalPositions, mainBreakerAmperage })
               }
               onNext={nextStep}
               onBack={prevStep}

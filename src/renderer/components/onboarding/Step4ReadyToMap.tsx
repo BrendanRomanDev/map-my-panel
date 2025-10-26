@@ -20,7 +20,8 @@ export function Step4ReadyToMap({ data, onComplete, onBack }: Step4ReadyToMapPro
       // Create the panel
       const panel = await window.electronAPI.panels.create({
         name: data.panelName,
-        total_positions: data.totalPositions
+        total_positions: data.totalPositions,
+        main_breaker_amperage: data.mainBreakerAmperage
       })
 
       // Create breakers for all positions
@@ -72,6 +73,9 @@ export function Step4ReadyToMap({ data, onComplete, onBack }: Step4ReadyToMapPro
             </div>
             <div>
               <span className="font-medium text-foreground">Positions:</span> {data.totalPositions}
+            </div>
+            <div>
+              <span className="font-medium text-foreground">Main Breaker:</span> {data.mainBreakerAmperage}A
             </div>
           </div>
         </div>

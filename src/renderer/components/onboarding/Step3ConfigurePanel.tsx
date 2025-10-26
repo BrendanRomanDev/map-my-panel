@@ -1,7 +1,8 @@
 interface Step3ConfigurePanelProps {
   panelName: string
   totalPositions: number
-  onUpdate: (panelName: string, totalPositions: number) => void
+  mainBreakerAmperage: number
+  onUpdate: (panelName: string, totalPositions: number, mainBreakerAmperage: number) => void
   onNext: () => void
   onBack: () => void
 }
@@ -9,19 +10,20 @@ interface Step3ConfigurePanelProps {
 export function Step3ConfigurePanel({
   panelName,
   totalPositions,
+  mainBreakerAmperage,
   onUpdate,
   onNext,
   onBack
 }: Step3ConfigurePanelProps) {
   const addRow = () => {
     if (totalPositions < 100) {
-      onUpdate(panelName, totalPositions + 2)
+      onUpdate(panelName, totalPositions + 2, mainBreakerAmperage)
     }
   }
 
   const removeRow = () => {
     if (totalPositions > 2) {
-      onUpdate(panelName, totalPositions - 2)
+      onUpdate(panelName, totalPositions - 2, mainBreakerAmperage)
     }
   }
 
@@ -29,7 +31,7 @@ export function Step3ConfigurePanel({
     <div>
       <h2 className="text-2xl font-bold mb-2">Step 3: Configure Your Panel</h2>
       <p className="text-muted-foreground mb-6">
-        Set up your breaker panel configuration. Most residential panels have 24-40 positions.
+        Set up your breaker panel configuration. Most residential panels have 24-40 positions and 100-200A capacity.
       </p>
 
       <div className="space-y-6">
@@ -39,10 +41,30 @@ export function Step3ConfigurePanel({
           <input
             type="text"
             value={panelName}
-            onChange={e => onUpdate(e.target.value, totalPositions)}
+            onChange={e => onUpdate(e.target.value, totalPositions, mainBreakerAmperage)}
             placeholder="e.g., Main Panel"
             className="w-full px-3 py-2 border border-input rounded-md bg-background"
           />
+        </div>
+
+        {/* Main breaker amperage */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Main Breaker Amperage</label>
+          <select
+            value={mainBreakerAmperage}
+            onChange={e => onUpdate(panelName, totalPositions, Number(e.target.value))}
+            className="w-full px-3 py-2 border border-input rounded-md bg-background"
+          >
+            <option value={100}>100A</option>
+            <option value={125}>125A</option>
+            <option value={150}>150A</option>
+            <option value={200}>200A</option>
+            <option value={225}>225A</option>
+            <option value={400}>400A</option>
+          </select>
+          <p className="text-xs text-muted-foreground mt-1">
+            This is the total capacity of your panel (check the main breaker label)
+          </p>
         </div>
 
         {/* Panel visualization */}

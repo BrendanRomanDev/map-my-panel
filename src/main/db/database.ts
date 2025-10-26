@@ -107,4 +107,54 @@ function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('001_initial_schema')
     console.log('Migration 001_initial_schema completed')
   }
+
+  // Migration 002: Add tandem breaker and panel amperage support
+  if (!appliedMigrations.includes('002_add_tandem_and_amperage')) {
+    console.log('Running migration: 002_add_tandem_and_amperage')
+
+    database.exec(`
+      -- Add new columns to panels table
+      ALTER TABLE panels ADD COLUMN main_breaker_amperage INTEGER DEFAULT 200;
+
+      -- Add new columns to breakers table
+      ALTER TABLE breakers ADD COLUMN position_slot TEXT CHECK (position_slot IN ('a', 'b'));
+      ALTER TABLE breakers ADD COLUMN linked_breaker_id TEXT REFERENCES breakers(id) ON DELETE SET NULL;
+
+      -- Drop the old unique constraint on panel_id, position
+      -- SQLite doesn't support DROP CONSTRAINT, so we need to recreate the table
+      CREATE TABLE breakers_new (
+        id TEXT PRIMARY KEY,
+        panel_id TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        position_slot TEXT CHECK (position_slot IN ('a', 'b')),
+        breaker_type TEXT NOT NULL CHECK (breaker_type IN ('single-pole', 'double-pole')),
+        amperage INTEGER NOT NULL CHECK (amperage > 0),
+        label TEXT,
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'spare')),
+        linked_breaker_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (panel_id) REFERENCES panels(id) ON DELETE CASCADE,
+        FOREIGN KEY (linked_breaker_id) REFERENCES breakers(id) ON DELETE SET NULL,
+        UNIQUE (panel_id, position, position_slot),
+        CHECK (label IS NULL OR length(label) <= 20)
+      );
+
+      -- Copy data from old table
+      INSERT INTO breakers_new (id, panel_id, position, position_slot, breaker_type, amperage, label, status, linked_breaker_id, created_at, updated_at)
+      SELECT id, panel_id, position, NULL, breaker_type, amperage, label, status, NULL, created_at, updated_at
+      FROM breakers;
+
+      -- Drop old table and rename new one
+      DROP TABLE breakers;
+      ALTER TABLE breakers_new RENAME TO breakers;
+
+      -- Recreate indexes
+      CREATE INDEX idx_breakers_panel_id ON breakers(panel_id);
+      CREATE INDEX idx_breakers_linked ON breakers(linked_breaker_id) WHERE linked_breaker_id IS NOT NULL;
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('002_add_tandem_and_amperage')
+    console.log('Migration 002_add_tandem_and_amperage completed')
+  }
 }

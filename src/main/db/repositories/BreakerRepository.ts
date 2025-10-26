@@ -13,18 +13,20 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
     const now = new Date().toISOString()
 
     const stmt = this.db.prepare(`
-      INSERT INTO breakers (id, panel_id, position, breaker_type, amperage, label, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO breakers (id, panel_id, position, position_slot, breaker_type, amperage, label, status, linked_breaker_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     stmt.run(
       id,
       input.panel_id,
       input.position,
+      input.position_slot || null,
       input.breaker_type,
       input.amperage,
       input.label || null,
       input.status || 'active',
+      input.linked_breaker_id || null,
       now,
       now
     )
@@ -34,8 +36,8 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
 
   createBatch(inputs: CreateBreakerInput[]): Breaker[] {
     const insert = this.db.prepare(`
-      INSERT INTO breakers (id, panel_id, position, breaker_type, amperage, label, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO breakers (id, panel_id, position, position_slot, breaker_type, amperage, label, status, linked_breaker_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     const insertMany = this.db.transaction((inputs: CreateBreakerInput[]) => {
@@ -48,10 +50,12 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
           id,
           input.panel_id,
           input.position,
+          input.position_slot || null,
           input.breaker_type,
           input.amperage,
           input.label || null,
           input.status || 'active',
+          input.linked_breaker_id || null,
           now,
           now
         )
@@ -108,6 +112,11 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
     const updates: string[] = []
     const values: any[] = []
 
+    if (input.position_slot !== undefined) {
+      updates.push('position_slot = ?')
+      values.push(input.position_slot)
+    }
+
     if (input.breaker_type !== undefined) {
       updates.push('breaker_type = ?')
       values.push(input.breaker_type)
@@ -126,6 +135,11 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
     if (input.status !== undefined) {
       updates.push('status = ?')
       values.push(input.status)
+    }
+
+    if (input.linked_breaker_id !== undefined) {
+      updates.push('linked_breaker_id = ?')
+      values.push(input.linked_breaker_id)
     }
 
     if (updates.length === 0) return existing

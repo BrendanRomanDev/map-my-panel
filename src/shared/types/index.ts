@@ -4,6 +4,7 @@ export interface Panel {
   id: string
   name: string
   total_positions: number
+  main_breaker_amperage: number  // Total panel capacity (e.g., 100A, 200A)
   created_at: Date
   updated_at: Date
 }
@@ -11,11 +12,13 @@ export interface Panel {
 export interface Breaker {
   id: string
   panel_id: string
-  position: number
+  position: number  // Physical row number (1-50)
+  position_slot: 'a' | 'b' | null  // For tandem breakers (19a, 19b), null for regular single breakers
   breaker_type: 'single-pole' | 'double-pole'
   amperage: number
   label: string | null  // Optional user-defined label (max 20 chars)
   status: 'active' | 'spare'
+  linked_breaker_id: string | null  // For double-pole breakers that span two positions
   created_at: Date
   updated_at: Date
 }
@@ -37,15 +40,18 @@ export interface Entity {
 export interface CreatePanelInput {
   name: string
   total_positions: number
+  main_breaker_amperage: number
 }
 
 export interface CreateBreakerInput {
   panel_id: string
   position: number
+  position_slot?: 'a' | 'b' | null
   breaker_type: 'single-pole' | 'double-pole'
   amperage: number
   label?: string | null
   status?: 'active' | 'spare'
+  linked_breaker_id?: string | null
 }
 
 export interface CreateEntityInput {
@@ -62,13 +68,16 @@ export interface CreateEntityInput {
 export interface UpdatePanelInput {
   name?: string
   total_positions?: number
+  main_breaker_amperage?: number
 }
 
 export interface UpdateBreakerInput {
+  position_slot?: 'a' | 'b' | null
   breaker_type?: 'single-pole' | 'double-pole'
   amperage?: number
   label?: string | null
   status?: 'active' | 'spare'
+  linked_breaker_id?: string | null
 }
 
 export interface UpdateEntityInput {

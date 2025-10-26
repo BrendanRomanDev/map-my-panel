@@ -8,11 +8,11 @@ export class PanelRepository extends BaseRepository<Panel, CreatePanelInput, Upd
     const now = new Date().toISOString()
 
     const stmt = this.db.prepare(`
-      INSERT INTO panels (id, name, total_positions, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO panels (id, name, total_positions, main_breaker_amperage, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
     `)
 
-    stmt.run(id, input.name, input.total_positions, now, now)
+    stmt.run(id, input.name, input.total_positions, input.main_breaker_amperage, now, now)
 
     return this.findById(id)!
   }
@@ -58,6 +58,11 @@ export class PanelRepository extends BaseRepository<Panel, CreatePanelInput, Upd
     if (input.total_positions !== undefined) {
       updates.push('total_positions = ?')
       values.push(input.total_positions)
+    }
+
+    if (input.main_breaker_amperage !== undefined) {
+      updates.push('main_breaker_amperage = ?')
+      values.push(input.main_breaker_amperage)
     }
 
     if (updates.length === 0) return existing
