@@ -4,6 +4,7 @@ import { AllEntitiesView } from '../entities/AllEntitiesView'
 import { ByRoomView } from '../entities/ByRoomView'
 import { ByBreakerView } from '../entities/ByBreakerView'
 import { UnmappedView } from '../entities/UnmappedView'
+import { BreakerPanelGrid } from '../breaker-panel/BreakerPanelGrid'
 
 interface MainLayoutProps {
   panel: Panel
@@ -71,10 +72,7 @@ export function MainLayout({ panel }: MainLayoutProps) {
 
         {/* Main panel view */}
         <main className="flex-1 p-6 overflow-auto">
-          <div className="text-center text-muted-foreground py-12">
-            <h2 className="text-2xl font-semibold mb-2">Panel View</h2>
-            <p>Breaker panel visualization will appear here</p>
-          </div>
+          <BreakerPanelGrid panel={panel} />
         </main>
       </div>
     </div>

@@ -17,7 +17,8 @@ export interface Breaker {
   breaker_type: 'single-pole' | 'double-pole'
   amperage: number
   label: string | null  // Optional user-defined label (max 20 chars)
-  status: 'active' | 'spare'
+  status: 'active' | 'spare'  // Is circuit installed/wired?
+  is_powered: boolean  // Is the breaker switch physically ON?
   linked_breaker_id: string | null  // For double-pole breakers that span two positions
   created_at: Date
   updated_at: Date
@@ -51,6 +52,7 @@ export interface CreateBreakerInput {
   amperage: number
   label?: string | null
   status?: 'active' | 'spare'
+  is_powered?: boolean
   linked_breaker_id?: string | null
 }
 
@@ -77,6 +79,7 @@ export interface UpdateBreakerInput {
   amperage?: number
   label?: string | null
   status?: 'active' | 'spare'
+  is_powered?: boolean
   linked_breaker_id?: string | null
 }
 

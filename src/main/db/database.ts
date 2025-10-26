@@ -157,4 +157,23 @@ function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('002_add_tandem_and_amperage')
     console.log('Migration 002_add_tandem_and_amperage completed')
   }
+
+  // Migration 003: Add is_powered field to track breaker switch state
+  if (!appliedMigrations.includes('003_add_is_powered')) {
+    console.log('Running migration: 003_add_is_powered')
+
+    database.exec(`
+      -- Add is_powered column to breakers table
+      -- Default TRUE for active breakers, FALSE for spare
+      ALTER TABLE breakers ADD COLUMN is_powered INTEGER DEFAULT 1 CHECK (is_powered IN (0, 1));
+
+      -- Set is_powered based on current status
+      -- Active breakers are assumed to be powered on by default
+      -- Spare breakers are powered off
+      UPDATE breakers SET is_powered = CASE WHEN status = 'active' THEN 1 ELSE 0 END;
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('003_add_is_powered')
+    console.log('Migration 003_add_is_powered completed')
+  }
 }
