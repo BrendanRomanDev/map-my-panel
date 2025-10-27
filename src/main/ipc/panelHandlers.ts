@@ -30,4 +30,8 @@ export function registerPanelHandlers(): void {
   ipcMain.handle('panels:delete', async (_, id: string): Promise<boolean> => {
     return panelRepo.delete(id)
   })
+
+  ipcMain.handle('panels:reset', async (_, id: string): Promise<{ entitiesDeleted: number; breakersDeleted: number }> => {
+    return panelRepo.resetPanel(id)
+  })
 }

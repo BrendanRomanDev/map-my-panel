@@ -250,6 +250,13 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
     return result.changes > 0
   }
 
+  deleteAllByPanel(panelId: string): number {
+    const stmt = this.db.prepare('DELETE FROM entities WHERE panel_id = ?')
+    const result = stmt.run(panelId)
+
+    return result.changes
+  }
+
   private mapRowToEntity(row: any): Entity {
     return {
       ...this.mapTimestamps(row),

@@ -1,12 +1,24 @@
+import { useState } from 'react'
 import { useUnmappedEntities } from '../../hooks/useEntities'
 import { EntityCard } from './EntityCard'
+import { EntityEditModal } from './EntityEditModal'
+import type { Entity } from '@shared/types'
 
 interface UnmappedViewProps {
   panelId: string
+  typeFilter?: string
+  roomFilter?: string
 }
 
-export function UnmappedView({ panelId }: UnmappedViewProps) {
-  const { data: entities, isLoading, error } = useUnmappedEntities(panelId)
+export function UnmappedView({ panelId, typeFilter = 'all', roomFilter = 'all' }: UnmappedViewProps) {
+  const { data: allEntities, isLoading, error } = useUnmappedEntities(panelId)
+  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
+
+  // Filter entities by type and room
+  const entities = allEntities?.filter(entity =>
+    (typeFilter === 'all' || entity.entity_type === typeFilter) &&
+    (roomFilter === 'all' || entity.room === roomFilter)
+  )
 
   if (isLoading) {
     return (
@@ -39,17 +51,29 @@ export function UnmappedView({ panelId }: UnmappedViewProps) {
   }
 
   return (
-    <div className="space-y-2">
-      <div className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center gap-2">
-        <span className="flex h-2 w-2 rounded-full bg-yellow-500" />
-        {entities.length} unmapped {entities.length === 1 ? 'entity' : 'entities'}
+    <>
+      <div className="space-y-2">
+        <div className="text-xs font-medium text-muted-foreground mb-2 px-1 flex items-center gap-2">
+          <span className="flex h-2 w-2 rounded-full bg-yellow-500" />
+          {entities.length} unmapped {entities.length === 1 ? 'entity' : 'entities'}
+        </div>
+        <div className="text-xs text-muted-foreground mb-4 px-1">
+          These entities haven't been assigned to a breaker yet. Click on a breaker to assign them.
+        </div>
+        {entities.map(entity => (
+          <EntityCard
+            key={entity.id}
+            entity={entity}
+            onEdit={() => setSelectedEntity(entity)}
+          />
+        ))}
       </div>
-      <div className="text-xs text-muted-foreground mb-4 px-1">
-        These entities haven't been assigned to a breaker yet. Click on a breaker to assign them.
-      </div>
-      {entities.map(entity => (
-        <EntityCard key={entity.id} entity={entity} />
-      ))}
-    </div>
+
+      <EntityEditModal
+        entity={selectedEntity}
+        isOpen={!!selectedEntity}
+        onClose={() => setSelectedEntity(null)}
+      />
+    </>
   )
 }

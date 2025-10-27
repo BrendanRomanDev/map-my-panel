@@ -21,6 +21,7 @@ export interface ElectronAPI {
     findById: (id: string) => Promise<Panel | null>
     update: (id: string, input: UpdatePanelInput) => Promise<Panel | null>
     delete: (id: string) => Promise<boolean>
+    reset: (id: string) => Promise<{ entitiesDeleted: number; breakersDeleted: number }>
   }
   breakers: {
     create: (input: CreateBreakerInput) => Promise<Breaker>
@@ -53,7 +54,8 @@ const electronAPI: ElectronAPI = {
     findAll: () => ipcRenderer.invoke('panels:findAll'),
     findById: (id) => ipcRenderer.invoke('panels:findById', id),
     update: (id, input) => ipcRenderer.invoke('panels:update', id, input),
-    delete: (id) => ipcRenderer.invoke('panels:delete', id)
+    delete: (id) => ipcRenderer.invoke('panels:delete', id),
+    reset: (id) => ipcRenderer.invoke('panels:reset', id)
   },
   breakers: {
     create: (input) => ipcRenderer.invoke('breakers:create', input),

@@ -62,6 +62,20 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
     breakersByPosition.get(breaker.position)!.push(breaker)
   })
 
+  // Sort breakers within each position: main (no slot) first, then 'a', then 'b'
+  breakersByPosition.forEach((breakers, position) => {
+    breakers.sort((a, b) => {
+      // No slot (main breaker) comes first
+      if (!a.position_slot && b.position_slot) return -1
+      if (a.position_slot && !b.position_slot) return 1
+      // Then sort by slot letter
+      if (a.position_slot && b.position_slot) {
+        return a.position_slot.localeCompare(b.position_slot)
+      }
+      return 0
+    })
+  })
+
   // Calculate number of rows (each row has 2 positions - left and right)
   const numRows = Math.ceil(panel.total_positions / 2)
 
@@ -118,12 +132,16 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
                 <div className="space-y-1">
                   {leftBreakers.length > 0 ? (
                     leftBreakers.map(breaker => (
-                      <BreakerCard
+                      <div
                         key={breaker.id}
-                        breaker={breaker}
-                        onClick={() => setSelectedBreaker(breaker)}
-                        onPowerToggle={handlePowerToggle}
-                      />
+                        className={breaker.position_slot ? 'ml-4' : ''}
+                      >
+                        <BreakerCard
+                          breaker={breaker}
+                          onClick={() => setSelectedBreaker(breaker)}
+                          onPowerToggle={handlePowerToggle}
+                        />
+                      </div>
                     ))
                   ) : (
                     <div className="p-3 border border-dashed border-muted rounded text-center text-sm text-muted-foreground">
@@ -136,12 +154,16 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
                 <div className="space-y-1">
                   {rightBreakers.length > 0 ? (
                     rightBreakers.map(breaker => (
-                      <BreakerCard
+                      <div
                         key={breaker.id}
-                        breaker={breaker}
-                        onClick={() => setSelectedBreaker(breaker)}
-                        onPowerToggle={handlePowerToggle}
-                      />
+                        className={breaker.position_slot ? 'ml-4' : ''}
+                      >
+                        <BreakerCard
+                          breaker={breaker}
+                          onClick={() => setSelectedBreaker(breaker)}
+                          onPowerToggle={handlePowerToggle}
+                        />
+                      </div>
                     ))
                   ) : (
                     <div className="p-3 border border-dashed border-muted rounded text-center text-sm text-muted-foreground">

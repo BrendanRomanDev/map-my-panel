@@ -1,12 +1,28 @@
+import { useState } from 'react'
 import { useEntitiesByRoom } from '../../hooks/useEntities'
 import { EntityCard } from './EntityCard'
+import { EntityEditModal } from './EntityEditModal'
+import type { Entity } from '@shared/types'
 
 interface ByRoomViewProps {
   panelId: string
+  typeFilter?: string
+  roomFilter?: string
 }
 
-export function ByRoomView({ panelId }: ByRoomViewProps) {
-  const { data: entitiesByRoom, isLoading, error } = useEntitiesByRoom(panelId)
+export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all' }: ByRoomViewProps) {
+  const { data: allEntitiesByRoom, isLoading, error } = useEntitiesByRoom(panelId)
+  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
+
+  // Filter entities by type and room, always include "Unassigned" group
+  const entitiesByRoom = allEntitiesByRoom
+    ?.filter(group => roomFilter === 'all' || group.room === roomFilter || (!group.room && roomFilter === 'all'))
+    ?.map(group => ({
+      room: group.room || 'Unassigned', // Label entities without a room as "Unassigned"
+      entities: group.entities.filter(entity =>
+        typeFilter === 'all' || entity.entity_type === typeFilter
+      )
+    })).filter(group => group.entities.length > 0)
 
   if (isLoading) {
     return (
@@ -38,19 +54,32 @@ export function ByRoomView({ panelId }: ByRoomViewProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {entitiesByRoom.map(({ room, entities }) => (
-        <div key={room || 'no-room'}>
-          <div className="text-sm font-semibold mb-2 px-1">
-            {room || 'No Room Assigned'} ({entities.length})
+    <>
+      <div className="space-y-4">
+        {entitiesByRoom.map(({ room, entities }) => (
+          <div key={room || 'no-room'}>
+            <div className="text-sm font-semibold mb-2 px-1 flex items-center gap-2">
+              {room === 'Unassigned' && <span className="flex h-2 w-2 rounded-full bg-yellow-500" />}
+              <span>{room} ({entities.length})</span>
+            </div>
+            <div className="space-y-2">
+              {entities.map(entity => (
+                <EntityCard
+                  key={entity.id}
+                  entity={entity}
+                  onEdit={() => setSelectedEntity(entity)}
+                />
+              ))}
+            </div>
           </div>
-          <div className="space-y-2">
-            {entities.map(entity => (
-              <EntityCard key={entity.id} entity={entity} />
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+
+      <EntityEditModal
+        entity={selectedEntity}
+        isOpen={!!selectedEntity}
+        onClose={() => setSelectedEntity(null)}
+      />
+    </>
   )
 }

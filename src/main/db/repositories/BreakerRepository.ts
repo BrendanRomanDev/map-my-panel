@@ -171,6 +171,13 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
     return result.changes > 0
   }
 
+  deleteAllByPanel(panelId: string): number {
+    const stmt = this.db.prepare('DELETE FROM breakers WHERE panel_id = ?')
+    const result = stmt.run(panelId)
+
+    return result.changes
+  }
+
   private mapRowToBreaker(row: any): Breaker {
     return {
       ...this.mapTimestamps(row),

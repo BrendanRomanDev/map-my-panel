@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto'
 import { BaseRepository } from './BaseRepository'
+import { EntityRepository } from './EntityRepository'
+import { BreakerRepository } from './BreakerRepository'
 import type { Panel, CreatePanelInput, UpdatePanelInput } from '../../../shared/types'
 
 export class PanelRepository extends BaseRepository<Panel, CreatePanelInput, UpdatePanelInput> {
@@ -85,6 +87,21 @@ export class PanelRepository extends BaseRepository<Panel, CreatePanelInput, Upd
     const result = stmt.run(id)
 
     return result.changes > 0
+  }
+
+  resetPanel(panelId: string): { entitiesDeleted: number; breakersDeleted: number } {
+    const entityRepo = new EntityRepository(this.db)
+    const breakerRepo = new BreakerRepository(this.db)
+
+    // Use transaction to ensure atomic operation
+    const resetTransaction = this.db.transaction(() => {
+      const entitiesDeleted = entityRepo.deleteAllByPanel(panelId)
+      const breakersDeleted = breakerRepo.deleteAllByPanel(panelId)
+
+      return { entitiesDeleted, breakersDeleted }
+    })
+
+    return resetTransaction()
   }
 
   private mapRowToPanel(row: any): Panel {

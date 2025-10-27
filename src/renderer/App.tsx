@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard'
 import { MainLayout } from './components/layout/MainLayout'
 import type { Panel } from '@shared/types'
 
 export function App() {
   const [currentPanel, setCurrentPanel] = useState<Panel | null>(null)
+  const queryClient = useQueryClient()
 
   // Query to check if a panel already exists
   const { data: existingPanel, isLoading, error } = useQuery({
@@ -24,6 +25,12 @@ export function App() {
       setCurrentPanel(existingPanel)
     }
   }, [existingPanel])
+
+  const handlePanelReset = () => {
+    // Clear current panel and invalidate query to return to onboarding
+    setCurrentPanel(null)
+    queryClient.invalidateQueries({ queryKey: ['panel', 'current'] })
+  }
 
   // Check for errors
   if (error) {
@@ -56,5 +63,5 @@ export function App() {
   }
 
   // Show main application
-  return <MainLayout panel={currentPanel} />
+  return <MainLayout panel={currentPanel} onPanelReset={handlePanelReset} />
 }

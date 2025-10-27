@@ -1,21 +1,18 @@
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { useUnmappedEntities } from '../../hooks/useEntities'
-import type { Entity } from '@shared/types'
 
 interface AssignEntitiesModalProps {
   breakerId: string
   panelId: string
   isOpen: boolean
   onClose: () => void
+  onAssign: (entityIds: string[]) => void
 }
 
-export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose }: AssignEntitiesModalProps) {
-  const queryClient = useQueryClient()
+export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAssign }: AssignEntitiesModalProps) {
   const { data: unmappedEntities } = useUnmappedEntities(panelId)
 
   const [selectedEntityIds, setSelectedEntityIds] = useState<Set<string>>(new Set())
-  const [isAssigning, setIsAssigning] = useState(false)
 
   if (!isOpen) return null
 
@@ -29,38 +26,12 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose }: Ass
     setSelectedEntityIds(newSelected)
   }
 
-  const handleAssign = async () => {
+  const handleAssign = () => {
     if (selectedEntityIds.size === 0) return
 
-    setIsAssigning(true)
-    try {
-      // Update all selected entities to point to this breaker
-      await Promise.all(
-        Array.from(selectedEntityIds).map(entityId =>
-          window.electronAPI.entities.update(entityId, {
-            breaker_id: breakerId
-          })
-        )
-      )
-
-      // Auto-activate breaker when entities are assigned
-      await window.electronAPI.breakers.update(breakerId, {
-        status: 'active',
-        is_powered: true
-      })
-
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['entities', panelId] })
-      queryClient.invalidateQueries({ queryKey: ['entitiesByBreaker', breakerId] })
-      queryClient.invalidateQueries({ queryKey: ['breakers', panelId] })
-
-      setSelectedEntityIds(new Set())
-      onClose()
-    } catch (error) {
-      console.error('Failed to assign entities:', error)
-    } finally {
-      setIsAssigning(false)
-    }
+    // Pass selected entities to parent - parent will handle saving
+    onAssign(Array.from(selectedEntityIds))
+    setSelectedEntityIds(new Set())
   }
 
   const handleCancel = () => {
@@ -126,17 +97,16 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose }: Ass
           <div className="flex gap-2">
             <button
               onClick={handleCancel}
-              disabled={isAssigning}
-              className="px-4 py-2 border border-border rounded-md hover:bg-muted disabled:opacity-50"
+              className="px-4 py-2 border border-border rounded-md hover:bg-muted"
             >
               Cancel
             </button>
             <button
               onClick={handleAssign}
-              disabled={isAssigning || selectedEntityIds.size === 0}
+              disabled={selectedEntityIds.size === 0}
               className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
             >
-              {isAssigning ? 'Assigning...' : `Assign ${selectedEntityIds.size > 0 ? `(${selectedEntityIds.size})` : ''}`}
+              {`Assign ${selectedEntityIds.size > 0 ? `(${selectedEntityIds.size})` : ''}`}
             </button>
           </div>
         </div>
