@@ -24,27 +24,7 @@ type GroupingType = 'room' | 'breaker'
 export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChange, onPanelReset }: MainLayoutProps) {
   const queryClient = useQueryClient()
 
-  // Query for property and panel data using IDs
-  const { data: property } = useQuery({
-    queryKey: ['property', propertyId],
-    queryFn: () => window.electronAPI.properties.findById(propertyId),
-    enabled: !!propertyId
-  })
-
-  const { data: panel } = useQuery({
-    queryKey: ['panel', panelId],
-    queryFn: () => window.electronAPI.panels.findById(panelId),
-    enabled: !!panelId
-  })
-
-  // Early return if data is loading
-  if (!property || !panel) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-lg text-muted-foreground">Loading...</div>
-      </div>
-    )
-  }
+  // All useState hooks MUST be called before any conditional returns
   const [grouping, setGrouping] = useState<GroupingType>('room')
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all')
   const [roomFilter, setRoomFilter] = useState<string>('all')
@@ -54,6 +34,19 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
   const [showPropertyModal, setShowPropertyModal] = useState(false)
   const [showPanelModal, setShowPanelModal] = useState(false)
 
+  // Query for property and panel data using IDs
+  const { data: property, isLoading: isLoadingProperty, isError: isErrorProperty } = useQuery({
+    queryKey: ['property', propertyId],
+    queryFn: () => window.electronAPI.properties.findById(propertyId),
+    enabled: !!propertyId
+  })
+
+  const { data: panel, isLoading: isLoadingPanel, isError: isErrorPanel } = useQuery({
+    queryKey: ['panel', panelId],
+    queryFn: () => window.electronAPI.panels.findById(panelId),
+    enabled: !!panelId
+  })
+
   // Fetch all properties
   const { data: allProperties, refetch: refetchProperties } = useQuery({
     queryKey: ['properties', 'all'],
@@ -62,9 +55,30 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
 
   // Fetch all panels for the current property
   const { data: propertyPanels, refetch: refetchPanels } = useQuery({
-    queryKey: ['panels', 'byProperty', property.id],
-    queryFn: () => window.electronAPI.panels.findByProperty(property.id)
+    queryKey: ['panels', 'byProperty', propertyId],
+    queryFn: () => window.electronAPI.panels.findByProperty(propertyId),
+    enabled: !!propertyId
   })
+
+  // Get all entities to extract unique rooms and types
+  const { data: allEntities } = useEntities(panelId)
+
+  // Early return if data is loading or error
+  if (isLoadingProperty || isLoadingPanel) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
+
+  if (isErrorProperty || isErrorPanel || !property || !panel) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-destructive">Error loading data. Please refresh the page.</div>
+      </div>
+    )
+  }
 
   const handlePropertySelect = async (propertyId: string) => {
     await window.electronAPI.properties.setAsCurrent(propertyId)
@@ -100,7 +114,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
   const handlePanelAdded = async () => {
     await refetchPanels()
     // Switch to the newly created panel
-    const panels = await window.electronAPI.panels.findByProperty(property.id)
+    const panels = await window.electronAPI.panels.findByProperty(propertyId)
     if (panels && panels.length > 0) {
       const newPanel = panels[panels.length - 1]
       onPanelChange(newPanel.id)
@@ -116,9 +130,6 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
     { id: 'room' as const, label: 'By Room' },
     { id: 'breaker' as const, label: 'By Breaker' }
   ]
-
-  // Get all entities to extract unique rooms and types
-  const { data: allEntities } = useEntities(panel.id)
 
   // Default entity types (includes "other" as fallback for deleted types)
   const defaultTypes = ['outlet', 'switch', 'light', 'appliance', 'hvac', 'other']
