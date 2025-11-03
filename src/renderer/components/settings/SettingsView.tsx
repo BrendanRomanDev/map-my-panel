@@ -16,28 +16,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
   const queryClient = useQueryClient()
   const { theme, setTheme, availableThemes } = useTheme()
 
-  // Query for property and panel data using IDs - React Query handles caching
-  const { data: property } = useQuery({
-    queryKey: ['property', propertyId],
-    queryFn: () => window.electronAPI.properties.findById(propertyId),
-    enabled: !!propertyId
-  })
-
-  const { data: panel } = useQuery({
-    queryKey: ['panel', panelId],
-    queryFn: () => window.electronAPI.panels.findById(panelId),
-    enabled: !!panelId
-  })
-
-  // Early return if data is loading
-  if (!property || !panel) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-muted-foreground">Loading settings...</div>
-      </div>
-    )
-  }
-
+  // All useState hooks MUST be called before any conditional returns
   const [showConfirmStep1, setShowConfirmStep1] = useState(false)
   const [showConfirmStep2, setShowConfirmStep2] = useState(false)
   const [confirmText, setConfirmText] = useState('')
@@ -80,7 +59,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
   const [editingPanelId, setEditingPanelId] = useState<string | null>(null)
   const [editingPanelName, setEditingPanelName] = useState('')
   const [showEditPanelLayoutModal, setShowEditPanelLayoutModal] = useState(false)
-  const [editLayoutPositions, setEditLayoutPositions] = useState(panel.total_positions)
+  const [editLayoutPositions, setEditLayoutPositions] = useState(0)
   const [isUpdatingLayout, setIsUpdatingLayout] = useState(false)
 
   // Delete panel state
@@ -90,10 +69,23 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
 
   // Main breaker amperage edit state
   const [editingMainBreakerAmperage, setEditingMainBreakerAmperage] = useState(false)
-  const [mainBreakerAmperageValue, setMainBreakerAmperageValue] = useState(panel.main_breaker_amperage)
+  const [mainBreakerAmperageValue, setMainBreakerAmperageValue] = useState(0)
 
   // Tab state
   const [activeTab, setActiveTab] = useState<'properties' | 'panel'>('properties')
+
+  // Query for property and panel data using IDs - React Query handles caching
+  const { data: property } = useQuery({
+    queryKey: ['property', propertyId],
+    queryFn: () => window.electronAPI.properties.findById(propertyId),
+    enabled: !!propertyId
+  })
+
+  const { data: panel } = useQuery({
+    queryKey: ['panel', panelId],
+    queryFn: () => window.electronAPI.panels.findById(panelId),
+    enabled: !!panelId
+  })
 
   // Fetch all properties
   const { data: allProperties, refetch: refetchProperties } = useQuery({
@@ -103,8 +95,9 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
 
   // Fetch all panels for current property
   const { data: propertyPanels } = useQuery({
-    queryKey: ['panels', 'byProperty', property.id],
-    queryFn: () => window.electronAPI.panels.findByProperty(property.id)
+    queryKey: ['panels', 'byProperty', propertyId],
+    queryFn: () => window.electronAPI.panels.findByProperty(propertyId),
+    enabled: !!propertyId
   })
 
   // Fetch panels for all properties to show counts
@@ -126,6 +119,15 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
     },
     enabled: !!allProperties
   })
+
+  // Early return if data is loading
+  if (!property || !panel) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-muted-foreground">Loading settings...</div>
+      </div>
+    )
+  }
 
   // Load rooms and types
   useEffect(() => {

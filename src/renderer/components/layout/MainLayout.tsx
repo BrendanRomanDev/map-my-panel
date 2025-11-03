@@ -9,7 +9,6 @@ import { AddEntityModal } from '../entities/AddEntityModal'
 import { AddPanelModal } from '../property/AddPanelModal'
 import { PropertySelectorModal } from '../property/PropertySelectorModal'
 import { PanelSelectorModal } from '../property/PanelSelectorModal'
-import { useEntities } from '../../hooks/useEntities'
 
 interface MainLayoutProps {
   propertyId: string
@@ -54,17 +53,71 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
   })
 
   // Fetch all panels for the current property
-  const { data: propertyPanels, refetch: refetchPanels } = useQuery({
+  const { data: propertyPanels, refetch: refetchPanels, isLoading: isLoadingPanels } = useQuery({
     queryKey: ['panels', 'byProperty', propertyId],
     queryFn: () => window.electronAPI.panels.findByProperty(propertyId),
     enabled: !!propertyId
   })
 
   // Get all entities to extract unique rooms and types
-  const { data: allEntities } = useEntities(panelId)
+  const { data: allEntities } = useQuery({
+    queryKey: ['entities', 'byPanel', panelId],
+    queryFn: () => window.electronAPI.entities.listByPanel(panelId),
+    enabled: !!panelId
+  })
+
+  // Default entity types (includes "other" as fallback for deleted types)
+  const defaultTypes = ['outlet', 'switch', 'light', 'appliance', 'hvac', 'other']
+
+  // Extract unique entity types from entities and combine with property's custom types
+  const availableEntityTypes = useMemo(() => {
+    const allTypes = new Set<string>(defaultTypes)
+
+    // Add property's custom entity types
+    if (property?.custom_entity_types) {
+      property.custom_entity_types.forEach(type => allTypes.add(type))
+    }
+
+    // Add any types found in existing entities (in case some were created before)
+    if (allEntities) {
+      allEntities.forEach(entity => {
+        if (entity.entity_type) {
+          allTypes.add(entity.entity_type)
+        }
+      })
+    }
+
+    return Array.from(allTypes).sort()
+  }, [property?.custom_entity_types, allEntities])
+
+  // Build entity type filter options
+  const entityTypes = useMemo(() => {
+    const options = [{ value: 'all', label: 'All Types' }]
+
+    // Add each available type (capitalize first letter for display)
+    availableEntityTypes.forEach(type => {
+      options.push({
+        value: type,
+        label: type.charAt(0).toUpperCase() + type.slice(1)
+      })
+    })
+
+    return options
+  }, [availableEntityTypes])
+
+  // Extract unique rooms from entities
+  const availableRooms = useMemo(() => {
+    if (!allEntities) return []
+    const rooms = new Set(
+      allEntities
+        .map(e => e.room)
+        .filter((room): room is string => room !== null && room.trim() !== '')
+    )
+    return Array.from(rooms).sort()
+  }, [allEntities])
 
   // Early return if data is loading or error
-  if (isLoadingProperty || isLoadingPanel) {
+  if (isLoadingProperty || isLoadingPanel || isLoadingPanels) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-lg text-muted-foreground">Loading...</div>
@@ -130,56 +183,6 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
     { id: 'room' as const, label: 'By Room' },
     { id: 'breaker' as const, label: 'By Breaker' }
   ]
-
-  // Default entity types (includes "other" as fallback for deleted types)
-  const defaultTypes = ['outlet', 'switch', 'light', 'appliance', 'hvac', 'other']
-
-  // Extract unique entity types from entities and combine with property's custom types
-  const availableEntityTypes = useMemo(() => {
-    const allTypes = new Set<string>(defaultTypes)
-
-    // Add property's custom entity types
-    if (property.custom_entity_types) {
-      property.custom_entity_types.forEach(type => allTypes.add(type))
-    }
-
-    // Add any types found in existing entities (in case some were created before)
-    if (allEntities) {
-      allEntities.forEach(entity => {
-        if (entity.entity_type) {
-          allTypes.add(entity.entity_type)
-        }
-      })
-    }
-
-    return Array.from(allTypes).sort()
-  }, [property.custom_entity_types, allEntities])
-
-  // Build entity type filter options
-  const entityTypes = useMemo(() => {
-    const options = [{ value: 'all', label: 'All Types' }]
-
-    // Add each available type (capitalize first letter for display)
-    availableEntityTypes.forEach(type => {
-      options.push({
-        value: type,
-        label: type.charAt(0).toUpperCase() + type.slice(1)
-      })
-    })
-
-    return options
-  }, [availableEntityTypes])
-
-  // Extract unique rooms from entities
-  const availableRooms = useMemo(() => {
-    if (!allEntities) return []
-    const rooms = new Set(
-      allEntities
-        .map(e => e.room)
-        .filter((room): room is string => room !== null && room.trim() !== '')
-    )
-    return Array.from(rooms).sort()
-  }, [allEntities])
 
   return (
     <div className="h-screen flex flex-col bg-background">

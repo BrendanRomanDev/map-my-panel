@@ -1,5 +1,110 @@
 # Project Memory
 
+## CRITICAL: React Rules of Hooks
+
+**⚠️ ALWAYS FOLLOW THESE RULES** - Violating these rules causes black screen crashes!
+
+### Rule: ALL Hooks Must Be Called in the Same Order Every Render
+
+React hooks (useState, useQuery, useMemo, useEffect, etc.) MUST be called:
+1. ✅ **At the top level** of the component
+2. ✅ **Before ANY conditional returns**
+3. ✅ **In the exact same order** every render
+
+### Correct Hook Ordering in Components
+
+```tsx
+export function MyComponent({ id }: Props) {
+  // ✅ 1. ALL useState hooks first
+  const [state1, setState1] = useState(initial)
+  const [state2, setState2] = useState(initial)
+
+  // ✅ 2. ALL useQuery hooks
+  const { data, isLoading } = useQuery({
+    queryKey: ['key', id],
+    queryFn: () => fetchData(id),
+    enabled: !!id  // Use enabled, not conditional hooks
+  })
+
+  // ✅ 3. ALL useMemo hooks
+  const computed = useMemo(() => {
+    // Use optional chaining if data might not exist
+    return data?.property || defaultValue
+  }, [data?.property])
+
+  // ✅ 4. NOW safe to do conditional returns
+  if (isLoading) {
+    return <Loading />
+  }
+
+  if (!data) {
+    return <Error />
+  }
+
+  // ✅ 5. Event handlers and other code
+  const handleClick = () => { ... }
+
+  return <div>...</div>
+}
+```
+
+### ❌ WRONG - This Causes Black Screen Crashes
+
+```tsx
+export function MyComponent({ id }: Props) {
+  const { data } = useQuery(...)
+
+  // ❌ WRONG: Early return before hooks
+  if (!data) {
+    return <Loading />
+  }
+
+  // ❌ WRONG: useState called AFTER conditional return
+  // This hook won't be called when data is null!
+  const [state, setState] = useState(data.value)
+
+  // ❌ WRONG: Using data in hook initialization
+  // data doesn't exist on first render!
+  const [value, setValue] = useState(data.property)
+}
+```
+
+### How to Handle Data in Hook Initialization
+
+```tsx
+// ❌ WRONG - data doesn't exist yet
+const [value, setValue] = useState(data.property)
+
+// ✅ CORRECT - Use safe default, sync with useEffect
+const [value, setValue] = useState(0)
+
+useEffect(() => {
+  if (data) {
+    setValue(data.property)
+  }
+}, [data?.property])
+```
+
+### Common Mistakes and Fixes
+
+| ❌ Mistake | ✅ Fix |
+|-----------|--------|
+| `if (!data) return <div/>` then `useState()` | Move all `useState` before the return |
+| `useState(panel.amperage)` | Use `useState(0)` + `useEffect` to sync |
+| `const val = useMemo(...)` after return | Move all `useMemo` before returns |
+| `useQuery(...)` without `enabled` | Add `enabled: !!id` parameter |
+
+### Why This Matters
+
+When hooks are called conditionally:
+1. First render: Component returns early, hooks never called
+2. Second render: Data loads, hooks called for first time
+3. **React Error**: Hook order changed between renders → BLACK SCREEN CRASH
+
+**Remember**: React relies on hook call order to maintain state. The order MUST be identical every single render, or the component will crash.
+
+---
+
 ## React Query Data Management Pattern
 
 **✅ CORRECT PATTERN** - Always use this approach:
