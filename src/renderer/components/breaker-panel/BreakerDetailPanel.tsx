@@ -207,10 +207,11 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
   }
 
   // Get available breakers for linking (double-pole)
+  // Allow breakers that are either unlinked OR linked to the current breaker (for bidirectional display)
   const availableBreakersForLinking = allBreakers?.filter(b =>
     b.id !== breaker.id &&
     b.breaker_type === 'double-pole' &&
-    !b.linked_breaker_id
+    (!b.linked_breaker_id || b.linked_breaker_id === breaker.id)
   ) || []
 
   // Find linked breaker if exists

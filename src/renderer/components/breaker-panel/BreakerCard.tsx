@@ -2,14 +2,20 @@ import type { BreakerWithEntityCount } from '@shared/types'
 
 interface BreakerCardProps {
   breaker: BreakerWithEntityCount
+  allBreakers?: BreakerWithEntityCount[]
   onClick?: () => void
   onPowerToggle?: (breakerId: string, isPowered: boolean) => void
 }
 
-export function BreakerCard({ breaker, onClick, onPowerToggle }: BreakerCardProps) {
+export function BreakerCard({ breaker, allBreakers, onClick, onPowerToggle }: BreakerCardProps) {
   const isSpare = breaker.status === 'spare'
   const hasEntities = breaker.entity_count > 0
   const isPoweredOff = !breaker.is_powered
+
+  // Find linked breaker if this breaker is linked
+  const linkedBreaker = breaker.linked_breaker_id && allBreakers
+    ? allBreakers.find(b => b.id === breaker.linked_breaker_id)
+    : null
 
   const handlePowerToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -47,6 +53,25 @@ export function BreakerCard({ breaker, onClick, onPowerToggle }: BreakerCardProp
             {isPoweredOff && !isSpare && (
               <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300">
                 OFF
+              </span>
+            )}
+            {linkedBreaker && (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="10"
+                  height="10"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+                {linkedBreaker.position}{linkedBreaker.position_slot || ''}
               </span>
             )}
           </div>

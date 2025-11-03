@@ -138,6 +138,7 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
                       >
                         <BreakerCard
                           breaker={breaker}
+                          allBreakers={breakers}
                           onClick={() => setSelectedBreaker(breaker)}
                           onPowerToggle={handlePowerToggle}
                         />
@@ -160,6 +161,7 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
                       >
                         <BreakerCard
                           breaker={breaker}
+                          allBreakers={breakers}
                           onClick={() => setSelectedBreaker(breaker)}
                           onPowerToggle={handlePowerToggle}
                         />

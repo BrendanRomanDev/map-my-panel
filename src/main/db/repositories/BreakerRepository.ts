@@ -161,10 +161,53 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
 
     stmt.run(...values)
 
+    // Handle bidirectional linking for double-pole breakers
+    if (input.linked_breaker_id !== undefined) {
+      const oldLinkedBreakerId = existing.linked_breaker_id
+      const newLinkedBreakerId = input.linked_breaker_id
+
+      // If we had an old link, remove the reverse link
+      if (oldLinkedBreakerId && oldLinkedBreakerId !== newLinkedBreakerId) {
+        const oldLinkedBreaker = this.findById(oldLinkedBreakerId)
+        if (oldLinkedBreaker && oldLinkedBreaker.linked_breaker_id === id) {
+          const unlinkStmt = this.db.prepare(`
+            UPDATE breakers SET linked_breaker_id = ?, updated_at = ? WHERE id = ?
+          `)
+          unlinkStmt.run(null, now, oldLinkedBreakerId)
+        }
+      }
+
+      // If we have a new link, set the reverse link
+      if (newLinkedBreakerId) {
+        const newLinkedBreaker = this.findById(newLinkedBreakerId)
+        if (newLinkedBreaker) {
+          // Only set reverse link if it's not already set or if it points to us
+          if (!newLinkedBreaker.linked_breaker_id || newLinkedBreaker.linked_breaker_id === id) {
+            const linkStmt = this.db.prepare(`
+              UPDATE breakers SET linked_breaker_id = ?, updated_at = ? WHERE id = ?
+            `)
+            linkStmt.run(id, now, newLinkedBreakerId)
+          }
+        }
+      }
+    }
+
     return this.findById(id)
   }
 
   delete(id: string): boolean {
+    // First, unlink any breaker that was linked to this one
+    const existing = this.findById(id)
+    if (existing?.linked_breaker_id) {
+      const linkedBreaker = this.findById(existing.linked_breaker_id)
+      if (linkedBreaker && linkedBreaker.linked_breaker_id === id) {
+        const unlinkStmt = this.db.prepare(`
+          UPDATE breakers SET linked_breaker_id = ?, updated_at = ? WHERE id = ?
+        `)
+        unlinkStmt.run(null, new Date().toISOString(), existing.linked_breaker_id)
+      }
+    }
+
     const stmt = this.db.prepare('DELETE FROM breakers WHERE id = ?')
     const result = stmt.run(id)
 
