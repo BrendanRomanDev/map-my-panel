@@ -696,7 +696,9 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
         const breakerIdsToDelete = new Set(breakersToDelete.map(b => b.id))
 
         // Find entities mapped to those breakers
-        const affectedEntities = allEntities.filter(e => e.breaker_id && breakerIdsToDelete.has(e.breaker_id))
+        const affectedEntities = allEntities.filter(e =>
+          e.breaker_ids.some(breakerId => breakerIdsToDelete.has(breakerId))
+        )
 
         if (affectedEntities.length > 0) {
           const entityNames = affectedEntities.map(e => e.name).join(', ')
@@ -713,10 +715,11 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
           }
         }
 
-        // Unmap affected entities first
+        // Unmap affected entities - remove the deleted breaker IDs from their breaker_ids arrays
         for (const entity of affectedEntities) {
+          const newBreakerIds = entity.breaker_ids.filter(id => !breakerIdsToDelete.has(id))
           await window.electronAPI.entities.update(entity.id, {
-            breaker_id: null
+            breaker_ids: newBreakerIds
           })
         }
 

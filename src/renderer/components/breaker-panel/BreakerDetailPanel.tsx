@@ -102,14 +102,22 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
       // Entities to assign (weren't assigned, now are)
       const toAssign = [...currentIds].filter(id => !originalIds.has(id))
 
-      // Unassign entities
+      // Unassign entities - remove this breaker from their breaker_ids array
       for (const entityId of toUnassign) {
-        await window.electronAPI.entities.update(entityId, { breaker_id: null })
+        const entity = allEntities?.find(e => e.id === entityId)
+        if (entity) {
+          const newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
+          await window.electronAPI.entities.update(entityId, { breaker_ids: newBreakerIds })
+        }
       }
 
-      // Assign entities
+      // Assign entities - add this breaker to their breaker_ids array
       for (const entityId of toAssign) {
-        await window.electronAPI.entities.update(entityId, { breaker_id: breaker.id })
+        const entity = allEntities?.find(e => e.id === entityId)
+        if (entity) {
+          const newBreakerIds = [...entity.breaker_ids, breaker.id]
+          await window.electronAPI.entities.update(entityId, { breaker_ids: newBreakerIds })
+        }
       }
 
       // Invalidate queries to refresh data
@@ -181,10 +189,11 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
 
     setIsDeleting(true)
     try {
-      // Unassign all entities from this breaker first
+      // Unassign all entities from this breaker first - remove this breaker from their breaker_ids arrays
       if (entities && entities.length > 0) {
         for (const entity of entities) {
-          await window.electronAPI.entities.update(entity.id, { breaker_id: null })
+          const newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
+          await window.electronAPI.entities.update(entity.id, { breaker_ids: newBreakerIds })
         }
       }
 
