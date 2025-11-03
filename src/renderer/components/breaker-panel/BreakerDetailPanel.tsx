@@ -160,6 +160,14 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         }
       }
 
+      // If we assigned any entities and there's a linked breaker, ensure it's also active and powered on
+      if (toAssign.length > 0 && linkedBreakerId) {
+        await window.electronAPI.breakers.update(linkedBreakerId, {
+          status: 'active',
+          is_powered: true
+        })
+      }
+
       // Invalidate queries to refresh data for both this breaker and linked breaker
       const queriesToInvalidate = invalidateEntityBreakerQueries(panelId, breaker.id, breaker.id)
       queriesToInvalidate.forEach(queryKey => {
@@ -229,6 +237,13 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
       entityIds.forEach(id => next.add(id))
       return next
     })
+
+    // When assigning entities, automatically set the breaker to active and powered on
+    if (entityIds.length > 0) {
+      setStatus('active')
+      setIsPowered(true)
+    }
+
     setIsAssignModalOpen(false)
   }
 
