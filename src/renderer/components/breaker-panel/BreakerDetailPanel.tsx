@@ -102,20 +102,28 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
       // Entities to assign (weren't assigned, now are)
       const toAssign = [...currentIds].filter(id => !originalIds.has(id))
 
-      // Unassign entities - remove this breaker from their breaker_ids array
+      // Unassign entities - remove this breaker (and linked partner if double-pole) from their breaker_ids array
       for (const entityId of toUnassign) {
         const entity = allEntities?.find(e => e.id === entityId)
         if (entity) {
-          const newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
+          let newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
+          // If this is a double-pole breaker with a linked partner, also remove that
+          if (breaker.linked_breaker_id) {
+            newBreakerIds = newBreakerIds.filter(id => id !== breaker.linked_breaker_id)
+          }
           await window.electronAPI.entities.update(entityId, { breaker_ids: newBreakerIds })
         }
       }
 
-      // Assign entities - add this breaker to their breaker_ids array
+      // Assign entities - add this breaker (and linked partner if double-pole) to their breaker_ids array
       for (const entityId of toAssign) {
         const entity = allEntities?.find(e => e.id === entityId)
         if (entity) {
           const newBreakerIds = [...entity.breaker_ids, breaker.id]
+          // If this is a double-pole breaker with a linked partner, also add that
+          if (breaker.linked_breaker_id && !newBreakerIds.includes(breaker.linked_breaker_id)) {
+            newBreakerIds.push(breaker.linked_breaker_id)
+          }
           await window.electronAPI.entities.update(entityId, { breaker_ids: newBreakerIds })
         }
       }
@@ -189,10 +197,15 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
 
     setIsDeleting(true)
     try {
-      // Unassign all entities from this breaker first - remove this breaker from their breaker_ids arrays
+      // Unassign all entities from this breaker first - remove this breaker (and linked partner if double-pole) from their breaker_ids arrays
       if (entities && entities.length > 0) {
         for (const entity of entities) {
-          const newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
+          let newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
+          // If this is a double-pole breaker with a linked partner, also remove that
+          // (since deleting one pole of a 240V circuit makes the circuit unusable)
+          if (breaker.linked_breaker_id) {
+            newBreakerIds = newBreakerIds.filter(id => id !== breaker.linked_breaker_id)
+          }
           await window.electronAPI.entities.update(entity.id, { breaker_ids: newBreakerIds })
         }
       }

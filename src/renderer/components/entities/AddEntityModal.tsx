@@ -172,9 +172,21 @@ export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps
                         checked={isChecked}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setBreakerIds([...breakerIds, breaker.id])
+                            // Add this breaker
+                            const newIds = [...breakerIds, breaker.id]
+                            // If this is a double-pole breaker with a linked partner, add that too
+                            if (breaker.linked_breaker_id && !newIds.includes(breaker.linked_breaker_id)) {
+                              newIds.push(breaker.linked_breaker_id)
+                            }
+                            setBreakerIds(newIds)
                           } else {
-                            setBreakerIds(breakerIds.filter(id => id !== breaker.id))
+                            // Remove this breaker
+                            let newIds = breakerIds.filter(id => id !== breaker.id)
+                            // If this is a double-pole breaker with a linked partner, remove that too
+                            if (breaker.linked_breaker_id) {
+                              newIds = newIds.filter(id => id !== breaker.linked_breaker_id)
+                            }
+                            setBreakerIds(newIds)
                           }
                         }}
                         className="w-4 h-4"

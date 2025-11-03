@@ -715,9 +715,19 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
           }
         }
 
-        // Unmap affected entities - remove the deleted breaker IDs from their breaker_ids arrays
+        // Collect all breaker IDs to remove from entities (deleted breakers + their linked partners)
+        const breakerIdsToRemove = new Set(breakerIdsToDelete)
+        for (const breaker of breakersToDelete) {
+          // If a deleted breaker has a linked partner that's not being deleted,
+          // we should also remove that partner from entities (240V circuit is broken)
+          if (breaker.linked_breaker_id && !breakerIdsToDelete.has(breaker.linked_breaker_id)) {
+            breakerIdsToRemove.add(breaker.linked_breaker_id)
+          }
+        }
+
+        // Unmap affected entities - remove all relevant breaker IDs from their breaker_ids arrays
         for (const entity of affectedEntities) {
-          const newBreakerIds = entity.breaker_ids.filter(id => !breakerIdsToDelete.has(id))
+          const newBreakerIds = entity.breaker_ids.filter(id => !breakerIdsToRemove.has(id))
           await window.electronAPI.entities.update(entity.id, {
             breaker_ids: newBreakerIds
           })
