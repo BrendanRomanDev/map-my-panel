@@ -72,6 +72,25 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all' 
   return (
     <>
       <div className="space-y-4">
+        {/* Unmapped entities section - shown at top */}
+        {unmappedEntities.length > 0 && (
+          <div>
+            <div className="text-sm font-semibold mb-2 px-1 flex items-center gap-2">
+              <span className="flex h-2 w-2 rounded-full bg-yellow-500" />
+              <span>Unmapped ({unmappedEntities.length})</span>
+            </div>
+            <div className="space-y-2">
+              {unmappedEntities.map(entity => (
+                <EntityCard
+                  key={entity.id}
+                  entity={entity}
+                  onEdit={() => setSelectedEntity(entity)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {breakersWithEntities.map(({ breaker, entities }) => (
           <div key={breaker.id}>
             <div className="text-sm font-semibold mb-2 px-1">
@@ -95,25 +114,6 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all' 
             </div>
           </div>
         ))}
-
-        {/* Unmapped entities section */}
-        {unmappedEntities.length > 0 && (
-          <div>
-            <div className="text-sm font-semibold mb-2 px-1 flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-yellow-500" />
-              <span>Unmapped ({unmappedEntities.length})</span>
-            </div>
-            <div className="space-y-2">
-              {unmappedEntities.map(entity => (
-                <EntityCard
-                  key={entity.id}
-                  entity={entity}
-                  onEdit={() => setSelectedEntity(entity)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       <EntityEditModal
