@@ -16,9 +16,20 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
 
   const handlePowerToggle = async (breakerId: string, isPowered: boolean) => {
     try {
+      // Find the breaker being toggled
+      const breaker = breakers?.find(b => b.id === breakerId)
+
+      // Update the breaker
       await window.electronAPI.breakers.update(breakerId, {
         is_powered: isPowered
       })
+
+      // If this breaker is linked to another, update the linked breaker too
+      if (breaker?.linked_breaker_id) {
+        await window.electronAPI.breakers.update(breaker.linked_breaker_id, {
+          is_powered: isPowered
+        })
+      }
 
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['breakers', panel.id] })
