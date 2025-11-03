@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useBreakers } from '../../hooks/useBreakers'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
@@ -10,9 +10,10 @@ interface AddEntityModalProps {
   panelId: string
   isOpen: boolean
   onClose: () => void
+  initialBreakerIds?: string[]
 }
 
-export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps) {
+export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds }: AddEntityModalProps) {
   const queryClient = useQueryClient()
   const { data: breakers } = useBreakers(panelId)
 
@@ -22,6 +23,13 @@ export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps
   const [location, setLocation] = useState('')
   const [breakerIds, setBreakerIds] = useState<string[]>([])
   const [isSaving, setIsSaving] = useState(false)
+
+  // Initialize breaker IDs when modal opens with initialBreakerIds
+  useEffect(() => {
+    if (isOpen && initialBreakerIds && initialBreakerIds.length > 0) {
+      setBreakerIds(initialBreakerIds)
+    }
+  }, [isOpen, initialBreakerIds])
 
   if (!isOpen) return null
 
