@@ -107,17 +107,6 @@ export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
   // Calculate number of rows (each row has 2 positions - left and right)
   const numRows = Math.ceil(panel.total_positions / 2)
 
-  // Calculate total installed load (all ACTIVE circuits, regardless of power state)
-  // This represents the panel's capacity usage based on what's installed
-  const totalAmperage = breakers
-    .filter(b => b.status === 'active')
-    .reduce((sum, b) => sum + b.amperage, 0)
-
-  // Calculate current draw (only powered-on active breakers)
-  const currentDraw = breakers
-    .filter(b => b.status === 'active' && b.is_powered)
-    .reduce((sum, b) => sum + b.amperage, 0)
-
   // Circuit statistics
   const totalCircuits = breakers.length
   const activeCircuits = breakers.filter(b => b.status === 'active').length
@@ -125,41 +114,19 @@ export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
   const poweredOnCircuits = breakers.filter(b => b.is_powered).length
   const poweredOffCircuits = breakers.filter(b => !b.is_powered).length
 
-  const usagePercent = Math.round((totalAmperage / panel.main_breaker_amperage) * 100)
-
   return (
     <div className="space-y-6">
       {/* Panel header */}
       <div>
         <h2 className="text-2xl font-bold">{panel.name}</h2>
         <div className="text-lg font-semibold text-muted-foreground">
-          {totalAmperage}A / {panel.main_breaker_amperage}A
+          {panel.main_breaker_amperage}A Panel
         </div>
       </div>
 
       {/* Metadata section */}
-      <div className="space-y-2">
-        <div className="text-sm text-muted-foreground">
-          {panel.total_positions} positions • {totalCircuits} {totalCircuits === 1 ? 'circuit' : 'circuits'} • {activeCircuits} active • {spareCircuits} spare • {poweredOnCircuits} on • {poweredOffCircuits} off
-        </div>
-        {/* Capacity bar */}
-        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-          <div
-            className={`h-full transition-all ${
-              usagePercent > 125
-                ? 'bg-destructive'
-                : usagePercent > 100
-                ? 'bg-yellow-500'
-                : 'bg-primary'
-            }`}
-            style={{ width: `${Math.min(usagePercent, 100)}%` }}
-          />
-        </div>
-        {usagePercent > 100 && (
-          <div className="text-xs text-muted-foreground">
-            Note: Panel oversubscription ({usagePercent}%) is normal - not all circuits draw full power simultaneously.
-          </div>
-        )}
+      <div className="text-sm text-muted-foreground">
+        {panel.total_positions} positions • {totalCircuits} {totalCircuits === 1 ? 'circuit' : 'circuits'} • {activeCircuits} active • {spareCircuits} spare • {poweredOnCircuits} on • {poweredOffCircuits} off
       </div>
 
       {/* Panel grid */}
