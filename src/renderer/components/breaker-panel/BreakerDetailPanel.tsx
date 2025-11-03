@@ -147,11 +147,19 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         }
       }
 
-      // Invalidate queries to refresh data
+      // Invalidate queries to refresh data for both this breaker and linked breaker
       const queriesToInvalidate = invalidateEntityBreakerQueries(panelId, breaker.id, breaker.id)
       queriesToInvalidate.forEach(queryKey => {
         queryClient.invalidateQueries({ queryKey })
       })
+
+      // Also invalidate queries for the linked breaker if it exists
+      if (linkedBreakerId) {
+        const linkedQueries = invalidateEntityBreakerQueries(panelId, linkedBreakerId, linkedBreakerId)
+        linkedQueries.forEach(queryKey => {
+          queryClient.invalidateQueries({ queryKey })
+        })
+      }
 
       onClose()
     } catch (error) {
