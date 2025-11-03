@@ -98,10 +98,10 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
 
   return (
     <div className="space-y-6">
-      {/* Panel header with capacity */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">{panel.name}</h2>
-        <div className="text-2xl font-bold">
+      {/* Panel header */}
+      <div>
+        <h2 className="text-2xl font-bold">{panel.name}</h2>
+        <div className="text-lg font-semibold text-muted-foreground">
           {totalAmperage}A / {panel.main_breaker_amperage}A
         </div>
       </div>
