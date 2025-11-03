@@ -59,9 +59,18 @@ export function EntityCard({ entity, onClick, onEdit }: EntityCardProps) {
               </svg>
             </button>
           )}
-          {!entity.breaker_id && (
+          {entity.breaker_ids.length === 0 && (
             <div className="px-2 py-0.5 text-xs rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
               Unmapped
+            </div>
+          )}
+          {entity.breaker_ids.length > 1 && (
+            <div className="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+              </svg>
+              {entity.breaker_ids.length}
             </div>
           )}
         </div>

@@ -225,7 +225,7 @@ export class BackupRepository {
 
     // Insert entities
     const insertEntity = this.db.prepare(`
-      INSERT INTO entities (id, panel_id, breaker_id, entity_type, name, room, location, metadata, created_at, updated_at)
+      INSERT INTO entities (id, panel_id, breaker_ids, entity_type, name, room, location, metadata, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
@@ -233,7 +233,7 @@ export class BackupRepository {
       insertEntity.run(
         entity.id,
         entity.panel_id,
-        entity.breaker_id,
+        JSON.stringify(entity.breaker_ids),
         entity.entity_type,
         entity.name,
         entity.room,

@@ -90,9 +90,11 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
     const stmt = this.db.prepare(`
       SELECT
         b.*,
-        COUNT(e.id) as entity_count
+        COUNT(DISTINCT e.id) as entity_count
       FROM breakers b
-      LEFT JOIN entities e ON e.breaker_id = b.id
+      LEFT JOIN entities e ON EXISTS (
+        SELECT 1 FROM json_each(e.breaker_ids) WHERE value = b.id
+      )
       WHERE b.panel_id = ?
       GROUP BY b.id
       ORDER BY b.position ASC

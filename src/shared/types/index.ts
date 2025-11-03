@@ -37,7 +37,7 @@ export interface Breaker {
 export interface Entity {
   id: string
   panel_id: string
-  breaker_id: string | null  // null = unmapped entity
+  breaker_ids: string[]  // Array of breaker IDs (empty array = unmapped, multiple IDs = double-pole)
   entity_type: string  // Default types: outlet, switch, light, appliance, hvac + custom user-defined types
   name: string
   room: string | null  // Optional room grouping
@@ -73,7 +73,7 @@ export interface CreateBreakerInput {
 
 export interface CreateEntityInput {
   panel_id: string
-  breaker_id?: string | null
+  breaker_ids?: string[]
   entity_type: string  // Default types: outlet, switch, light, appliance, hvac + custom user-defined types
   name: string
   room?: string | null
@@ -103,7 +103,7 @@ export interface UpdateBreakerInput {
 }
 
 export interface UpdateEntityInput {
-  breaker_id?: string | null
+  breaker_ids?: string[]
   entity_type?: string  // Default types: outlet, switch, light, appliance, hvac + custom user-defined types
   name?: string
   room?: string | null

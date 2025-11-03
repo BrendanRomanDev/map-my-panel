@@ -54,7 +54,7 @@ export async function generatePanelPDF(
   doc.setFontSize(8)
 
   for (const breaker of sortedBreakers) {
-    const breakerEntities = entities.filter(e => e.breaker_id === breaker.id)
+    const breakerEntities = entities.filter(e => e.breaker_ids.includes(breaker.id))
     const posText = `${breaker.position}${breaker.position_slot || ''}`
     const typeText = breaker.breaker_type === 'single-pole' ? 'SP' : 'DP'
     const statusText = breaker.status === 'active' ? 'Active' : 'Spare'
@@ -121,9 +121,9 @@ export async function generatePanelPDF(
     doc.setFont('helvetica', 'normal')
 
     for (const entity of roomEntities) {
-      const breaker = breakers.find(b => b.id === entity.breaker_id)
-      const breakerText = breaker
-        ? `Pos ${breaker.position}${breaker.position_slot || ''} (${breaker.amperage}A)`
+      const entityBreakers = breakers.filter(b => entity.breaker_ids.includes(b.id))
+      const breakerText = entityBreakers.length > 0
+        ? entityBreakers.map(b => `Pos ${b.position}${b.position_slot || ''} (${b.amperage}A)`).join(', ')
         : 'Unmapped'
 
       doc.text(`• ${entity.name}`, 25, y)

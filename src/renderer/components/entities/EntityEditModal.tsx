@@ -20,7 +20,7 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
   const [entityType, setEntityType] = useState<string>('outlet')
   const [room, setRoom] = useState('')
   const [location, setLocation] = useState('')
-  const [breakerId, setBreakerId] = useState<string | null>(null)
+  const [breakerIds, setBreakerIds] = useState<string[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -32,7 +32,7 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
       setEntityType(entity.entity_type)
       setRoom(entity.room || '')
       setLocation(entity.location || '')
-      setBreakerId(entity.breaker_id)
+      setBreakerIds(entity.breaker_ids)
     }
   }, [entity])
 

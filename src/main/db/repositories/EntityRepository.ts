@@ -13,14 +13,14 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
     const now = new Date().toISOString()
 
     const stmt = this.db.prepare(`
-      INSERT INTO entities (id, panel_id, breaker_id, entity_type, name, room, location, metadata, created_at, updated_at)
+      INSERT INTO entities (id, panel_id, breaker_ids, entity_type, name, room, location, metadata, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     stmt.run(
       id,
       input.panel_id,
-      input.breaker_id || null,
+      JSON.stringify(input.breaker_ids || []),
       input.entity_type,
       input.name,
       input.room || null,
@@ -35,7 +35,7 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
 
   createBatch(inputs: CreateEntityInput[]): Entity[] {
     const insert = this.db.prepare(`
-      INSERT INTO entities (id, panel_id, breaker_id, entity_type, name, room, location, metadata, created_at, updated_at)
+      INSERT INTO entities (id, panel_id, breaker_ids, entity_type, name, room, location, metadata, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
@@ -48,7 +48,7 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
         insert.run(
           id,
           input.panel_id,
-          input.breaker_id || null,
+          JSON.stringify(input.breaker_ids || []),
           input.entity_type,
           input.name,
           input.room || null,
@@ -96,9 +96,9 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
 
   listByBreaker(breakerId: string): Entity[] {
     const stmt = this.db.prepare(`
-      SELECT * FROM entities
-      WHERE breaker_id = ?
-      ORDER BY name ASC
+      SELECT e.* FROM entities e, json_each(e.breaker_ids) AS breaker
+      WHERE breaker.value = ?
+      ORDER BY e.name ASC
     `)
 
     const rows = stmt.all(breakerId) as any[]
@@ -109,7 +109,7 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
   listUnmapped(panelId: string): Entity[] {
     const stmt = this.db.prepare(`
       SELECT * FROM entities
-      WHERE panel_id = ? AND breaker_id IS NULL
+      WHERE panel_id = ? AND breaker_ids = '[]'
       ORDER BY room, name ASC
     `)
 
@@ -165,16 +165,26 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
   }
 
   assignToBreaker(entityIds: string[], breakerId: string): void {
-    const placeholders = entityIds.map(() => '?').join(',')
     const now = new Date().toISOString()
 
-    const stmt = this.db.prepare(`
+    // For each entity, add the breakerId to its breaker_ids array if not already present
+    const updateStmt = this.db.prepare(`
       UPDATE entities
-      SET breaker_id = ?, updated_at = ?
-      WHERE id IN (${placeholders})
+      SET breaker_ids = json_insert(breaker_ids, '$[#]', ?),
+          updated_at = ?
+      WHERE id = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM json_each(breaker_ids) WHERE value = ?
+      )
     `)
 
-    stmt.run(breakerId, now, ...entityIds)
+    const transaction = this.db.transaction((entityIds: string[], breakerId: string) => {
+      for (const entityId of entityIds) {
+        updateStmt.run(breakerId, now, entityId, breakerId)
+      }
+    })
+
+    transaction(entityIds, breakerId)
   }
 
   unassignFromBreaker(entityIds: string[]): void {
@@ -183,7 +193,7 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
 
     const stmt = this.db.prepare(`
       UPDATE entities
-      SET breaker_id = NULL, updated_at = ?
+      SET breaker_ids = '[]', updated_at = ?
       WHERE id IN (${placeholders})
     `)
 
@@ -198,9 +208,9 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
     const updates: string[] = []
     const values: any[] = []
 
-    if (input.breaker_id !== undefined) {
-      updates.push('breaker_id = ?')
-      values.push(input.breaker_id)
+    if (input.breaker_ids !== undefined) {
+      updates.push('breaker_ids = ?')
+      values.push(JSON.stringify(input.breaker_ids))
     }
 
     if (input.entity_type !== undefined) {
@@ -327,6 +337,7 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
   private mapRowToEntity(row: any): Entity {
     return {
       ...this.mapTimestamps(row),
+      breaker_ids: this.parseJsonField(row.breaker_ids) || [],
       metadata: this.parseJsonField(row.metadata)
     } as Entity
   }
