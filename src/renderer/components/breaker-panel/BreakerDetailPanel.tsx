@@ -414,10 +414,12 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
               value={breakerType}
               onChange={e => {
                 const newType = e.target.value as 'single-pole' | 'double-pole'
+                const oldType = breakerType
                 setBreakerType(newType)
-                // If changing to single-pole, clear any linked breaker
-                if (newType === 'single-pole' && linkedBreakerId) {
+                // If changing from double-pole to single-pole, optimistically clear entities and links
+                if (oldType === 'double-pole' && newType === 'single-pole') {
                   setLinkedBreakerId(null)
+                  setAssignedEntityIds(new Set()) // Clear all assigned entities
                 }
               }}
               className="w-full px-3 py-2 border border-input rounded-md bg-background"
