@@ -55,6 +55,17 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAss
     onClose()
   }
 
+  const handleEntityCreated = (wasAssignedToBreakers: boolean) => {
+    // Close the add entity modal
+    setShowAddEntityModal(false)
+
+    // If entity was assigned to breakers, close this modal too (job done!)
+    // If entity was unmapped, stay in this modal so user can assign it
+    if (wasAssignedToBreakers) {
+      onClose()
+    }
+  }
+
   return (
     <>
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
@@ -144,6 +155,7 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAss
         isOpen={showAddEntityModal}
         onClose={() => setShowAddEntityModal(false)}
         initialBreakerIds={initialBreakerIds}
+        onEntityCreated={handleEntityCreated}
       />
     </>
   )

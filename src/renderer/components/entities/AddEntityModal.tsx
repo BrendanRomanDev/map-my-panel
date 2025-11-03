@@ -11,9 +11,10 @@ interface AddEntityModalProps {
   isOpen: boolean
   onClose: () => void
   initialBreakerIds?: string[]
+  onEntityCreated?: (wasAssignedToBreakers: boolean) => void
 }
 
-export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds }: AddEntityModalProps) {
+export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, onEntityCreated }: AddEntityModalProps) {
   const queryClient = useQueryClient()
   const { data: breakers } = useBreakers(panelId)
 
@@ -72,6 +73,10 @@ export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds }: 
         // Log but don't block - entity was created successfully
         console.error('Post-creation operations failed:', postError)
       }
+
+      // Notify parent whether entity was assigned to breakers
+      const wasAssignedToBreakers = breakerIds.length > 0
+      onEntityCreated?.(wasAssignedToBreakers)
 
       // Reset form and close - entity was created successfully
       setEntityType('outlet')
