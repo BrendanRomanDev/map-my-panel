@@ -125,6 +125,11 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
     setEditLayoutPositions(panel.total_positions)
   }, [panel.total_positions])
 
+  // Sync mainBreakerAmperageValue when panel changes
+  useEffect(() => {
+    setMainBreakerAmperageValue(panel.main_breaker_amperage)
+  }, [panel.main_breaker_amperage])
+
   const loadRoomsAndTypes = async () => {
     try {
       const [roomsData, typesData] = await Promise.all([
@@ -630,7 +635,11 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
       })
       setEditingMainBreakerAmperage(false)
       // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['panels'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['panels'], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['panels', property.id], refetchType: 'active' }),
+        queryClient.invalidateQueries({ queryKey: ['panel', panel.id], refetchType: 'active' })
+      ])
     } catch (error) {
       console.error('Failed to update main breaker amperage:', error)
       alert('Failed to update main breaker amperage')
