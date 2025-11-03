@@ -28,6 +28,7 @@
   "dependencies": {
     "@tanstack/react-query": "^5.56.2",
     "better-sqlite3": "^11.6.0",
+    "jspdf": "^3.0.3",
     "zustand": "^4.5.5"
   },
   "devDependencies": {

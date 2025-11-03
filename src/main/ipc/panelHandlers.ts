@@ -34,4 +34,8 @@ export function registerPanelHandlers(): void {
   ipcMain.handle('panels:reset', async (_, id: string): Promise<{ entitiesDeleted: number; breakersDeleted: number }> => {
     return panelRepo.resetPanel(id)
   })
+
+  ipcMain.handle('panels:findByProperty', async (_, propertyId: string): Promise<Panel[]> => {
+    return panelRepo.findByProperty(propertyId)
+  })
 }

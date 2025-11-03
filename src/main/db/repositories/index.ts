@@ -1,4 +1,6 @@
 export { BaseRepository } from './BaseRepository'
+export { PropertyRepository } from './PropertyRepository'
 export { PanelRepository } from './PanelRepository'
 export { BreakerRepository } from './BreakerRepository'
 export { EntityRepository } from './EntityRepository'
+export { BackupRepository } from './BackupRepository'

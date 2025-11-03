@@ -1,13 +1,15 @@
 interface Step3ConfigurePanelProps {
+  propertyName: string
   panelName: string
   totalPositions: number
   mainBreakerAmperage: number
-  onUpdate: (panelName: string, totalPositions: number, mainBreakerAmperage: number) => void
+  onUpdate: (propertyName: string, panelName: string, totalPositions: number, mainBreakerAmperage: number) => void
   onNext: () => void
   onBack: () => void
 }
 
 export function Step3ConfigurePanel({
+  propertyName,
   panelName,
   totalPositions,
   mainBreakerAmperage,
@@ -17,32 +19,47 @@ export function Step3ConfigurePanel({
 }: Step3ConfigurePanelProps) {
   const addRow = () => {
     if (totalPositions < 100) {
-      onUpdate(panelName, totalPositions + 2, mainBreakerAmperage)
+      onUpdate(propertyName, panelName, totalPositions + 2, mainBreakerAmperage)
     }
   }
 
   const removeRow = () => {
     if (totalPositions > 2) {
-      onUpdate(panelName, totalPositions - 2, mainBreakerAmperage)
+      onUpdate(propertyName, panelName, totalPositions - 2, mainBreakerAmperage)
     }
   }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-2">Step 3: Configure Your Panel</h2>
+      <h2 className="text-2xl font-bold mb-2">Step 3: Configure Your Property & Panel</h2>
       <p className="text-muted-foreground mb-6">
-        Set up your breaker panel configuration. Most residential panels have 24-40 positions and 100-200A capacity.
+        Name your property and configure your breaker panel. Most residential panels have 24-40 positions and 100-200A capacity.
       </p>
 
       <div className="space-y-6">
+        {/* Property name */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Property Name</label>
+          <input
+            type="text"
+            value={propertyName}
+            onChange={e => onUpdate(e.target.value, panelName, totalPositions, mainBreakerAmperage)}
+            placeholder="e.g., My House, Rental Property, Main Office"
+            className="w-full px-3 py-2 border border-input rounded-md bg-background"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            You can manage multiple properties, each with one or more panels
+          </p>
+        </div>
+
         {/* Panel name */}
         <div>
           <label className="block text-sm font-medium mb-1">Panel Name</label>
           <input
             type="text"
             value={panelName}
-            onChange={e => onUpdate(e.target.value, totalPositions, mainBreakerAmperage)}
-            placeholder="e.g., Main Panel"
+            onChange={e => onUpdate(propertyName, e.target.value, totalPositions, mainBreakerAmperage)}
+            placeholder="e.g., Main Panel, Garage Panel"
             className="w-full px-3 py-2 border border-input rounded-md bg-background"
           />
         </div>
@@ -52,7 +69,7 @@ export function Step3ConfigurePanel({
           <label className="block text-sm font-medium mb-1">Main Breaker Amperage</label>
           <select
             value={mainBreakerAmperage}
-            onChange={e => onUpdate(panelName, totalPositions, Number(e.target.value))}
+            onChange={e => onUpdate(propertyName, panelName, totalPositions, Number(e.target.value))}
             className="w-full px-3 py-2 border border-input rounded-md bg-background"
           >
             <option value={100}>100A</option>
@@ -119,7 +136,7 @@ export function Step3ConfigurePanel({
         </button>
         <button
           onClick={onNext}
-          disabled={!panelName.trim()}
+          disabled={!propertyName.trim() || !panelName.trim()}
           className="px-6 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Next

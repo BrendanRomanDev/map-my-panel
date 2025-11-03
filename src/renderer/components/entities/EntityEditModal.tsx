@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useBreakers } from '../../hooks/useBreakers'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import { RoomSelector } from '../shared/RoomSelector'
+import { TypeSelector } from '../shared/TypeSelector'
 import type { Entity } from '@shared/types'
 
 interface EntityEditModalProps {
@@ -16,7 +17,7 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
   const { data: allBreakers } = useBreakers(entity?.panel_id || '')
 
   const [name, setName] = useState('')
-  const [entityType, setEntityType] = useState<'outlet' | 'switch' | 'light' | 'appliance' | 'hvac' | 'other'>('outlet')
+  const [entityType, setEntityType] = useState<string>('outlet')
   const [room, setRoom] = useState('')
   const [location, setLocation] = useState('')
   const [breakerId, setBreakerId] = useState<string | null>(null)
@@ -67,6 +68,10 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
 
     setIsSaving(true)
     try {
+      const oldBreakerId = entity.breaker_id
+      const newBreakerId = breakerId
+
+      // Update the entity - this is the critical operation
       await window.electronAPI.entities.update(entity.id, {
         name: name.trim(),
         entity_type: entityType,
@@ -75,11 +80,33 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
         breaker_id: breakerId
       })
 
-      // Invalidate queries to refresh data
-      const queriesToInvalidate = invalidateEntityBreakerQueries(entity.panel_id, entity.breaker_id, breakerId)
-      queriesToInvalidate.forEach(queryKey => {
-        queryClient.invalidateQueries({ queryKey })
-      })
+      // Entity updated successfully - now do best-effort post-update operations
+      // If these fail, we still want to close the modal since the entity was updated
+      try {
+        // Auto-activate breaker if this is the first entity on it
+        // Only if breaker changed and we're assigning to a new breaker
+        if (newBreakerId && oldBreakerId !== newBreakerId) {
+          const entitiesOnNewBreaker = await window.electronAPI.entities.listByBreaker(newBreakerId)
+
+          // If this is the only entity on this breaker, set it to "on"
+          if (entitiesOnNewBreaker.length === 1) {
+            await window.electronAPI.breakers.update(newBreakerId, {
+              status: 'on'
+            })
+          }
+        }
+
+        // Invalidate all relevant queries - use helper function and refetch
+        const queriesToInvalidate = invalidateEntityBreakerQueries(entity.panel_id, entity.breaker_id, breakerId)
+        await Promise.all(
+          queriesToInvalidate.map(queryKey =>
+            queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
+          )
+        )
+      } catch (postError) {
+        // Log but don't block - entity was updated successfully
+        console.error('Post-update operations failed:', postError)
+      }
 
       onClose()
     } catch (error) {
@@ -156,18 +183,12 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
               <label className="block text-sm font-medium mb-1">
                 Type
               </label>
-              <select
+              <TypeSelector
+                panelId={entity?.panel_id || ''}
                 value={entityType}
-                onChange={e => setEntityType(e.target.value as typeof entityType)}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background"
-              >
-                <option value="outlet">Outlet</option>
-                <option value="switch">Switch</option>
-                <option value="light">Light</option>
-                <option value="appliance">Appliance</option>
-                <option value="hvac">HVAC</option>
-                <option value="other">Other</option>
-              </select>
+                onChange={setEntityType}
+                placeholder="Select or add type"
+              />
             </div>
 
             {/* Room */}

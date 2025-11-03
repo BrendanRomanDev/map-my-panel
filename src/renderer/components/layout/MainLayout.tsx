@@ -1,43 +1,147 @@
 import { useState, useMemo } from 'react'
-import type { Panel } from '@shared/types'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Property, Panel } from '@shared/types'
 import { ByRoomView } from '../entities/ByRoomView'
 import { ByBreakerView } from '../entities/ByBreakerView'
 import { BreakerPanelGrid } from '../breaker-panel/BreakerPanelGrid'
 import { SettingsView } from '../settings/SettingsView'
 import { AddEntityModal } from '../entities/AddEntityModal'
+import { AddPanelModal } from '../property/AddPanelModal'
+import { PropertySelectorModal } from '../property/PropertySelectorModal'
+import { PanelSelectorModal } from '../property/PanelSelectorModal'
 import { useEntities } from '../../hooks/useEntities'
 
 interface MainLayoutProps {
+  property: Property
   panel: Panel
+  onPropertyChange: (property: Property) => void
+  onPanelChange: (panel: Panel) => void
   onPanelReset: () => void
 }
 
 type GroupingType = 'room' | 'breaker'
 
-export function MainLayout({ panel, onPanelReset }: MainLayoutProps) {
+export function MainLayout({ property, panel, onPropertyChange, onPanelChange, onPanelReset }: MainLayoutProps) {
+  const queryClient = useQueryClient()
   const [grouping, setGrouping] = useState<GroupingType>('room')
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all')
   const [roomFilter, setRoomFilter] = useState<string>('all')
   const [showSettings, setShowSettings] = useState(false)
   const [showAddEntityModal, setShowAddEntityModal] = useState(false)
+  const [showAddPanelModal, setShowAddPanelModal] = useState(false)
+  const [showPropertyModal, setShowPropertyModal] = useState(false)
+  const [showPanelModal, setShowPanelModal] = useState(false)
+
+  // Fetch all properties
+  const { data: allProperties, refetch: refetchProperties } = useQuery({
+    queryKey: ['properties', 'all'],
+    queryFn: () => window.electronAPI.properties.findAll()
+  })
+
+  // Fetch all panels for the current property
+  const { data: propertyPanels, refetch: refetchPanels } = useQuery({
+    queryKey: ['panels', 'byProperty', property.id],
+    queryFn: () => window.electronAPI.panels.findByProperty(property.id)
+  })
+
+  const handlePropertySelect = async (propertyId: string) => {
+    const selectedProperty = allProperties?.find(p => p.id === propertyId)
+    if (selectedProperty) {
+      await window.electronAPI.properties.setAsCurrent(propertyId)
+
+      // Get all panels for this property
+      const panels = await window.electronAPI.panels.findByProperty(propertyId)
+
+      // Always update property
+      onPropertyChange(selectedProperty)
+
+      if (panels && panels.length > 0) {
+        // Switch to first panel of the new property
+        const firstPanel = panels[0]
+        onPanelChange(firstPanel)
+
+        // Invalidate all queries related to panels, breakers, and entities
+        queryClient.invalidateQueries({ queryKey: ['panels'] })
+        queryClient.invalidateQueries({ queryKey: ['breakers'] })
+        queryClient.invalidateQueries({ queryKey: ['entities'] })
+      }
+      // If no panels, don't call onPanelChange - the UI will handle the "no panels" state
+    }
+  }
+
+  const handlePanelSelect = (panelId: string) => {
+    const selectedPanel = propertyPanels?.find(p => p.id === panelId)
+    if (selectedPanel) {
+      onPanelChange(selectedPanel)
+
+      // Invalidate queries for breakers and entities when switching panels
+      queryClient.invalidateQueries({ queryKey: ['breakers', 'byPanel', panelId] })
+      queryClient.invalidateQueries({ queryKey: ['entities', 'byPanel', panelId] })
+      queryClient.invalidateQueries({ queryKey: ['entities', 'byRoom', panelId] })
+    }
+  }
+
+  const handlePanelAdded = async () => {
+    await refetchPanels()
+    // Switch to the newly created panel
+    const panels = await window.electronAPI.panels.findByProperty(property.id)
+    if (panels && panels.length > 0) {
+      const newPanel = panels[panels.length - 1]
+      onPanelChange(newPanel)
+    }
+  }
+
+  const handlePropertyChangeFromSettings = (newProperty: Property, newPanel: Panel) => {
+    onPropertyChange(newProperty)
+    onPanelChange(newPanel)
+  }
 
   const groupingOptions = [
     { id: 'room' as const, label: 'By Room' },
     { id: 'breaker' as const, label: 'By Breaker' }
   ]
 
-  const entityTypes = [
-    { value: 'all', label: 'All Types' },
-    { value: 'outlet', label: 'Outlets' },
-    { value: 'switch', label: 'Switches' },
-    { value: 'light', label: 'Lights' },
-    { value: 'appliance', label: 'Appliances' },
-    { value: 'hvac', label: 'HVAC' },
-    { value: 'other', label: 'Other' }
-  ]
-
-  // Get all entities to extract unique rooms
+  // Get all entities to extract unique rooms and types
   const { data: allEntities } = useEntities(panel.id)
+
+  // Default entity types (includes "other" as fallback for deleted types)
+  const defaultTypes = ['outlet', 'switch', 'light', 'appliance', 'hvac', 'other']
+
+  // Extract unique entity types from entities and combine with property's custom types
+  const availableEntityTypes = useMemo(() => {
+    const allTypes = new Set<string>(defaultTypes)
+
+    // Add property's custom entity types
+    if (property.custom_entity_types) {
+      property.custom_entity_types.forEach(type => allTypes.add(type))
+    }
+
+    // Add any types found in existing entities (in case some were created before)
+    if (allEntities) {
+      allEntities.forEach(entity => {
+        if (entity.entity_type) {
+          allTypes.add(entity.entity_type)
+        }
+      })
+    }
+
+    return Array.from(allTypes).sort()
+  }, [property.custom_entity_types, allEntities])
+
+  // Build entity type filter options
+  const entityTypes = useMemo(() => {
+    const options = [{ value: 'all', label: 'All Types' }]
+
+    // Add each available type (capitalize first letter for display)
+    availableEntityTypes.forEach(type => {
+      options.push({
+        value: type,
+        label: type.charAt(0).toUpperCase() + type.slice(1)
+      })
+    })
+
+    return options
+  }, [availableEntityTypes])
 
   // Extract unique rooms from entities
   const availableRooms = useMemo(() => {
@@ -55,16 +159,34 @@ export function MainLayout({ panel, onPanelReset }: MainLayoutProps) {
       {/* Header */}
       <header className="border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">{showSettings ? 'Settings' : panel.name}</h1>
-            {!showSettings && (
-              <p className="text-sm text-muted-foreground">
-                {panel.total_positions} positions
-              </p>
+          <div className="flex items-center gap-3">
+            {!showSettings ? (
+              <div className="flex items-center gap-2">
+                {allProperties && allProperties.length > 1 && (
+                  <button
+                    onClick={() => setShowPropertyModal(true)}
+                    className="px-3 py-2 rounded-md hover:bg-muted transition-colors text-left"
+                  >
+                    <div className="text-xs text-muted-foreground">Property</div>
+                    <div className="text-base font-bold">{property.name}</div>
+                  </button>
+                )}
+
+                {propertyPanels && propertyPanels.length > 0 && (
+                  <button
+                    onClick={() => setShowPanelModal(true)}
+                    className="px-3 py-2 rounded-md hover:bg-muted transition-colors text-left"
+                  >
+                    <div className="text-xs text-muted-foreground">Panel</div>
+                    <div className="text-base font-bold">{panel.name}</div>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <h1 className="text-xl font-bold">Settings</h1>
             )}
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-sm text-muted-foreground">Map My Panel</div>
             <button
               onClick={() => setShowSettings(!showSettings)}
               className="p-2 hover:bg-muted rounded-md transition-colors"
@@ -91,10 +213,15 @@ export function MainLayout({ panel, onPanelReset }: MainLayoutProps) {
           /* Settings View - Full Width */
           <div className="flex-1 p-6 overflow-auto">
             <div className="max-w-2xl mx-auto">
-              <SettingsView panel={panel} onReset={onPanelReset} />
+              <SettingsView
+                property={property}
+                panel={panel}
+                onReset={onPanelReset}
+                onPropertyChange={handlePropertyChangeFromSettings}
+              />
             </div>
           </div>
-        ) : (
+        ) : propertyPanels && propertyPanels.length > 0 ? (
           <>
             {/* Sidebar */}
             <aside className="w-80 border-r border-border bg-muted/30 flex flex-col">
@@ -168,16 +295,70 @@ export function MainLayout({ panel, onPanelReset }: MainLayoutProps) {
               <BreakerPanelGrid panel={panel} />
             </main>
           </>
+        ) : (
+          /* No Panels - Empty State */
+          <div className="flex-1 flex items-center justify-center p-6">
+            <div className="text-center max-w-md">
+              <svg className="w-16 h-16 mx-auto mb-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <h2 className="text-xl font-semibold mb-2">No Panels Yet</h2>
+              <p className="text-muted-foreground mb-6">
+                This property doesn't have any panels. Create your first panel to start mapping your electrical system.
+              </p>
+              <button
+                onClick={() => setShowAddPanelModal(true)}
+                className="px-6 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 font-medium"
+              >
+                + Add Panel
+              </button>
+            </div>
+          </div>
         )}
 
       </div>
 
-      {/* Add Entity Modal */}
-      <AddEntityModal
-        panelId={panel.id}
-        isOpen={showAddEntityModal}
-        onClose={() => setShowAddEntityModal(false)}
+      {/* Add Entity Modal - only when we have panels */}
+      {propertyPanels && propertyPanels.length > 0 && (
+        <AddEntityModal
+          panelId={panel.id}
+          isOpen={showAddEntityModal}
+          onClose={() => setShowAddEntityModal(false)}
+        />
+      )}
+
+      {/* Add Panel Modal */}
+      <AddPanelModal
+        propertyId={property.id}
+        isOpen={showAddPanelModal}
+        onClose={() => setShowAddPanelModal(false)}
+        onSuccess={handlePanelAdded}
+        existingPanels={propertyPanels || []}
       />
+
+      {/* Property Selector Modal - only when multiple properties exist */}
+      {allProperties && allProperties.length > 1 && (
+        <PropertySelectorModal
+          isOpen={showPropertyModal}
+          onClose={() => setShowPropertyModal(false)}
+          currentProperty={property}
+          allProperties={allProperties || []}
+          onPropertySelect={handlePropertySelect}
+        />
+      )}
+
+      {/* Panel Selector Modal - only when we have panels */}
+      {propertyPanels && propertyPanels.length > 0 && (
+        <PanelSelectorModal
+          isOpen={showPanelModal}
+          onClose={() => setShowPanelModal(false)}
+          currentPanel={panel}
+          propertyPanels={propertyPanels}
+          propertyName={property.name}
+          onPanelSelect={handlePanelSelect}
+          onAddPanel={() => setShowAddPanelModal(true)}
+        />
+      )}
     </div>
   )
 }

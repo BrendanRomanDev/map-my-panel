@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useBreakers } from '../../hooks/useBreakers'
-import { queryKeys } from '../../lib/queryKeys'
+import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import { RoomSelector } from '../shared/RoomSelector'
+import { TypeSelector } from '../shared/TypeSelector'
 import type { CreateEntityInput } from '@shared/types'
 
 interface AddEntityModalProps {
@@ -39,19 +40,37 @@ export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps
         metadata: {}
       }
 
+      // Create the entity - this is the critical operation
       await window.electronAPI.entities.create(input)
 
-      // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: queryKeys.entities.byPanel(panelId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.entities.byRoom(panelId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.entities.unmapped(panelId) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.breakers.byPanel(panelId) })
+      // Entity created successfully - now do best-effort post-creation operations
+      // If these fail, we still want to close the modal since the entity was created
+      try {
+        // Auto-activate breaker if this is the first entity on it
+        if (breakerId) {
+          const entitiesOnBreaker = await window.electronAPI.entities.listByBreaker(breakerId)
 
-      if (breakerId) {
-        queryClient.invalidateQueries({ queryKey: queryKeys.entities.byBreaker(breakerId) })
+          // If this is the only entity on this breaker, set it to "on"
+          if (entitiesOnBreaker.length === 1) {
+            await window.electronAPI.breakers.update(breakerId, {
+              status: 'on'
+            })
+          }
+        }
+      } catch (postError) {
+        // Log but don't block - entity was created successfully
+        console.error('Post-creation operations failed:', postError)
       }
 
-      // Reset form and close
+      // Invalidate all relevant queries - use helper function and refetch
+      const queriesToInvalidate = invalidateEntityBreakerQueries(panelId, null, breakerId)
+      await Promise.all(
+        queriesToInvalidate.map(queryKey =>
+          queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
+        )
+      )
+
+      // Reset form and close - entity was created successfully
       setEntityType('outlet')
       setName('')
       setRoom('')
@@ -91,18 +110,12 @@ export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps
           {/* Entity Type */}
           <div>
             <label className="block text-sm font-medium mb-1">Type *</label>
-            <select
+            <TypeSelector
+              panelId={panelId}
               value={entityType}
-              onChange={(e) => setEntityType(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="outlet">Outlet</option>
-              <option value="switch">Switch</option>
-              <option value="light">Light</option>
-              <option value="appliance">Appliance</option>
-              <option value="hvac">HVAC</option>
-              <option value="other">Other</option>
-            </select>
+              onChange={setEntityType}
+              placeholder="Select or add type"
+            />
           </div>
 
           {/* Name */}

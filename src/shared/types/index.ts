@@ -1,7 +1,17 @@
 // Core data models matching SQLite schema
 
+export interface Property {
+  id: string
+  name: string
+  custom_entity_types: string[]  // User-defined entity types (stored as JSON array in DB)
+  is_current: boolean
+  created_at: number
+  updated_at: number
+}
+
 export interface Panel {
   id: string
+  property_id: string
   name: string
   total_positions: number
   main_breaker_amperage: number  // Total panel capacity (e.g., 100A, 200A)
@@ -28,7 +38,7 @@ export interface Entity {
   id: string
   panel_id: string
   breaker_id: string | null  // null = unmapped entity
-  entity_type: 'outlet' | 'switch' | 'light' | 'appliance' | 'hvac' | 'other'
+  entity_type: string  // Default types: outlet, switch, light, appliance, hvac + custom user-defined types
   name: string
   room: string | null  // Optional room grouping
   location: string | null
@@ -38,7 +48,12 @@ export interface Entity {
 }
 
 // Input types for create operations
+export interface CreatePropertyInput {
+  name: string
+}
+
 export interface CreatePanelInput {
+  property_id: string
   name: string
   total_positions: number
   main_breaker_amperage: number
@@ -59,7 +74,7 @@ export interface CreateBreakerInput {
 export interface CreateEntityInput {
   panel_id: string
   breaker_id?: string | null
-  entity_type: 'outlet' | 'switch' | 'light' | 'appliance' | 'hvac' | 'other'
+  entity_type: string  // Default types: outlet, switch, light, appliance, hvac + custom user-defined types
   name: string
   room?: string | null
   location?: string | null
@@ -67,6 +82,10 @@ export interface CreateEntityInput {
 }
 
 // Input types for update operations
+export interface UpdatePropertyInput {
+  name?: string
+}
+
 export interface UpdatePanelInput {
   name?: string
   total_positions?: number
@@ -85,7 +104,7 @@ export interface UpdateBreakerInput {
 
 export interface UpdateEntityInput {
   breaker_id?: string | null
-  entity_type?: 'outlet' | 'switch' | 'light' | 'appliance' | 'hvac' | 'other'
+  entity_type?: string  // Default types: outlet, switch, light, appliance, hvac + custom user-defined types
   name?: string
   room?: string | null
   location?: string | null

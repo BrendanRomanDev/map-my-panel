@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import type { Panel } from '@shared/types'
+import type { Property, Panel } from '@shared/types'
 import type { OnboardingData } from './OnboardingWizard'
 
 interface Step4ReadyToMapProps {
   data: OnboardingData
-  onComplete: (panel: Panel) => void
+  onComplete: (property: Property, panel: Panel) => void
   onBack: () => void
 }
 
@@ -17,8 +17,14 @@ export function Step4ReadyToMap({ data, onComplete, onBack }: Step4ReadyToMapPro
     setError(null)
 
     try {
+      // Create the property first
+      const property = await window.electronAPI.properties.create({
+        name: data.propertyName
+      })
+
       // Create the panel
       const panel = await window.electronAPI.panels.create({
+        property_id: property.id,
         name: data.panelName,
         total_positions: data.totalPositions,
         main_breaker_amperage: data.mainBreakerAmperage
@@ -49,9 +55,9 @@ export function Step4ReadyToMap({ data, onComplete, onBack }: Step4ReadyToMapPro
         await window.electronAPI.entities.createBatch(entityInputs)
       }
 
-      onComplete(panel)
+      onComplete(property, panel)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create panel')
+      setError(err instanceof Error ? err.message : 'Failed to create property and panel')
       setIsCreating(false)
     }
   }
@@ -65,6 +71,15 @@ export function Step4ReadyToMap({ data, onComplete, onBack }: Step4ReadyToMapPro
 
       {/* Summary */}
       <div className="space-y-4 mb-8">
+        <div className="p-4 border border-border rounded-md bg-muted/30">
+          <h3 className="font-semibold mb-2">Property</h3>
+          <div className="text-sm text-muted-foreground space-y-1">
+            <div>
+              <span className="font-medium text-foreground">Name:</span> {data.propertyName}
+            </div>
+          </div>
+        </div>
+
         <div className="p-4 border border-border rounded-md bg-muted/30">
           <h3 className="font-semibold mb-2">Panel Configuration</h3>
           <div className="text-sm text-muted-foreground space-y-1">

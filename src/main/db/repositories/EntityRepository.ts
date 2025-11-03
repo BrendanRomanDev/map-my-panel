@@ -257,6 +257,73 @@ export class EntityRepository extends BaseRepository<Entity, CreateEntityInput, 
     return result.changes
   }
 
+  // Room management methods
+  getAllRooms(panelId: string): Array<{ room: string; count: number }> {
+    const stmt = this.db.prepare(`
+      SELECT room, COUNT(*) as count
+      FROM entities
+      WHERE panel_id = ? AND room IS NOT NULL AND room != ''
+      GROUP BY room
+      ORDER BY room ASC
+    `)
+
+    const rows = stmt.all(panelId) as any[]
+    return rows.map(row => ({ room: row.room, count: row.count }))
+  }
+
+  deleteRoom(panelId: string, roomName: string): number {
+    const stmt = this.db.prepare(`
+      UPDATE entities
+      SET room = NULL, updated_at = ?
+      WHERE panel_id = ? AND room = ?
+    `)
+
+    const now = new Date().toISOString()
+    const result = stmt.run(now, panelId, roomName)
+
+    return result.changes
+  }
+
+  renameRoom(panelId: string, oldName: string, newName: string): number {
+    const stmt = this.db.prepare(`
+      UPDATE entities
+      SET room = ?, updated_at = ?
+      WHERE panel_id = ? AND room = ?
+    `)
+
+    const now = new Date().toISOString()
+    const result = stmt.run(newName, now, panelId, oldName)
+
+    return result.changes
+  }
+
+  // Type management methods
+  getAllEntityTypes(panelId: string): Array<{ entity_type: string; count: number }> {
+    const stmt = this.db.prepare(`
+      SELECT entity_type, COUNT(*) as count
+      FROM entities
+      WHERE panel_id = ?
+      GROUP BY entity_type
+      ORDER BY entity_type ASC
+    `)
+
+    const rows = stmt.all(panelId) as any[]
+    return rows.map(row => ({ entity_type: row.entity_type, count: row.count }))
+  }
+
+  changeEntityType(panelId: string, oldType: string, newType: string): number {
+    const stmt = this.db.prepare(`
+      UPDATE entities
+      SET entity_type = ?, updated_at = ?
+      WHERE panel_id = ? AND entity_type = ?
+    `)
+
+    const now = new Date().toISOString()
+    const result = stmt.run(newType, now, panelId, oldType)
+
+    return result.changes
+  }
+
   private mapRowToEntity(row: any): Entity {
     return {
       ...this.mapTimestamps(row),

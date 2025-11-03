@@ -176,4 +176,121 @@ function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('003_add_is_powered')
     console.log('Migration 003_add_is_powered completed')
   }
+
+  // Migration 004: Add custom entity types support
+  if (!appliedMigrations.includes('004_custom_entity_types')) {
+    console.log('Running migration: 004_custom_entity_types')
+
+    database.exec(`
+      -- Add custom_entity_types column to panels table (stores JSON array of custom types)
+      ALTER TABLE panels ADD COLUMN custom_entity_types TEXT DEFAULT '[]';
+
+      -- Remove CHECK constraint on entity_type to allow custom values
+      -- SQLite doesn't support DROP CONSTRAINT, so we need to recreate the table
+      CREATE TABLE entities_new (
+        id TEXT PRIMARY KEY,
+        panel_id TEXT NOT NULL,
+        breaker_id TEXT,
+        entity_type TEXT NOT NULL,
+        name TEXT NOT NULL,
+        room TEXT,
+        location TEXT,
+        metadata TEXT DEFAULT '{}',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (panel_id) REFERENCES panels(id) ON DELETE CASCADE,
+        FOREIGN KEY (breaker_id) REFERENCES breakers(id) ON DELETE SET NULL
+      );
+
+      -- Copy data from old table
+      INSERT INTO entities_new (id, panel_id, breaker_id, entity_type, name, room, location, metadata, created_at, updated_at)
+      SELECT id, panel_id, breaker_id, entity_type, name, room, location, metadata, created_at, updated_at
+      FROM entities;
+
+      -- Drop old table and rename new one
+      DROP TABLE entities;
+      ALTER TABLE entities_new RENAME TO entities;
+
+      -- Recreate indexes
+      CREATE INDEX idx_entities_breaker_id ON entities(breaker_id);
+      CREATE INDEX idx_entities_room ON entities(room);
+      CREATE INDEX idx_entities_name ON entities(name COLLATE NOCASE);
+      CREATE INDEX idx_entities_unmapped ON entities(panel_id, breaker_id) WHERE breaker_id IS NULL;
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('004_custom_entity_types')
+    console.log('Migration 004_custom_entity_types completed')
+  }
+
+  // Migration 005: Add properties support for multi-panel management
+  if (!appliedMigrations.includes('005_add_properties')) {
+    console.log('Running migration: 005_add_properties')
+
+    database.exec(`
+      -- Create properties table
+      CREATE TABLE properties (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        custom_entity_types TEXT DEFAULT '[]',
+        is_current INTEGER DEFAULT 0,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+
+      -- Create a default property for existing panels
+      INSERT INTO properties (id, name, custom_entity_types, is_current, created_at, updated_at)
+      SELECT
+        'prop_' || hex(randomblob(8)),
+        'My Property',
+        '[]',
+        1,
+        strftime('%s', 'now') * 1000,
+        strftime('%s', 'now') * 1000
+      WHERE EXISTS (SELECT 1 FROM panels);
+
+      -- Create new panels table with property_id
+      CREATE TABLE panels_new (
+        id TEXT PRIMARY KEY,
+        property_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        total_positions INTEGER NOT NULL CHECK (total_positions >= 2 AND total_positions <= 100),
+        main_breaker_amperage INTEGER DEFAULT 200,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+      );
+
+      -- Migrate existing panels to the default property
+      INSERT INTO panels_new (id, property_id, name, total_positions, main_breaker_amperage, created_at, updated_at)
+      SELECT
+        p.id,
+        (SELECT id FROM properties LIMIT 1),
+        p.name,
+        p.total_positions,
+        p.main_breaker_amperage,
+        p.created_at,
+        p.updated_at
+      FROM panels p;
+
+      -- Migrate custom_entity_types from panels to property
+      UPDATE properties
+      SET custom_entity_types = (
+        SELECT custom_entity_types
+        FROM panels
+        WHERE panels.custom_entity_types != '[]'
+        LIMIT 1
+      )
+      WHERE EXISTS (SELECT 1 FROM panels WHERE panels.custom_entity_types != '[]');
+
+      -- Drop old panels table and rename new one
+      DROP TABLE panels;
+      ALTER TABLE panels_new RENAME TO panels;
+
+      -- Create index for property lookups
+      CREATE INDEX idx_panels_property_id ON panels(property_id);
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('005_add_properties')
+    console.log('Migration 005_add_properties completed')
+  }
 }

@@ -59,4 +59,26 @@ export function registerEntityHandlers(): void {
   ipcMain.handle('entities:delete', async (_, id: string): Promise<boolean> => {
     return entityRepo.delete(id)
   })
+
+  // Room management handlers
+  ipcMain.handle('entities:getAllRooms', async (_, panelId: string): Promise<Array<{ room: string; count: number }>> => {
+    return entityRepo.getAllRooms(panelId)
+  })
+
+  ipcMain.handle('entities:deleteRoom', async (_, panelId: string, roomName: string): Promise<number> => {
+    return entityRepo.deleteRoom(panelId, roomName)
+  })
+
+  ipcMain.handle('entities:renameRoom', async (_, panelId: string, oldName: string, newName: string): Promise<number> => {
+    return entityRepo.renameRoom(panelId, oldName, newName)
+  })
+
+  // Type management handlers
+  ipcMain.handle('entities:getAllEntityTypes', async (_, panelId: string): Promise<Array<{ entity_type: string; count: number }>> => {
+    return entityRepo.getAllEntityTypes(panelId)
+  })
+
+  ipcMain.handle('entities:changeEntityType', async (_, panelId: string, oldType: string, newType: string): Promise<number> => {
+    return entityRepo.changeEntityType(panelId, oldType, newType)
+  })
 }
