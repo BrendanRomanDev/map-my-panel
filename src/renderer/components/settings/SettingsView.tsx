@@ -23,8 +23,16 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
     initialData: property
   })
 
-  // Use local property data for custom types, fall back to prop
+  // Fetch panel data locally to ensure UI updates when panel is modified
+  const { data: localPanel } = useQuery({
+    queryKey: ['panel', panel.id],
+    queryFn: () => window.electronAPI.panels.findById(panel.id),
+    initialData: panel
+  })
+
+  // Use local data for current values, fall back to props
   const currentProperty = localProperty || property
+  const currentPanel = localPanel || panel
 
   const [showConfirmStep1, setShowConfirmStep1] = useState(false)
   const [showConfirmStep2, setShowConfirmStep2] = useState(false)
@@ -122,13 +130,13 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
 
   // Sync editLayoutPositions when panel changes
   useEffect(() => {
-    setEditLayoutPositions(panel.total_positions)
-  }, [panel.total_positions])
+    setEditLayoutPositions(currentPanel.total_positions)
+  }, [currentPanel.total_positions])
 
   // Sync mainBreakerAmperageValue when panel changes
   useEffect(() => {
-    setMainBreakerAmperageValue(panel.main_breaker_amperage)
-  }, [panel.main_breaker_amperage])
+    setMainBreakerAmperageValue(currentPanel.main_breaker_amperage)
+  }, [currentPanel.main_breaker_amperage])
 
   const loadRoomsAndTypes = async () => {
     try {
@@ -162,7 +170,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
   }
 
   const handleConfirmStep2 = async () => {
-    if (confirmText !== panel.name) return
+    if (confirmText !== currentPanel.name) return
 
     setIsResetting(true)
     try {
@@ -191,7 +199,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
   }
 
   const handleDeletePanel = async () => {
-    if (deletePanelConfirmText !== panel.name) return
+    if (deletePanelConfirmText !== currentPanel.name) return
 
     setIsDeletingPanel(true)
     try {
@@ -603,7 +611,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
   }
 
   const handleRenamePanel = async () => {
-    if (!editingPanelName.trim() || editingPanelName === panel.name) {
+    if (!editingPanelName.trim() || editingPanelName === currentPanel.name) {
       setEditingPanelId(null)
       setEditingPanelName('')
       return
@@ -624,7 +632,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
   }
 
   const handleUpdateMainBreakerAmperage = async () => {
-    if (mainBreakerAmperageValue === panel.main_breaker_amperage) {
+    if (mainBreakerAmperageValue === currentPanel.main_breaker_amperage) {
       setEditingMainBreakerAmperage(false)
       return
     }
@@ -647,7 +655,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
   }
 
   const handleOpenEditLayout = () => {
-    setEditLayoutPositions(panel.total_positions)
+    setEditLayoutPositions(currentPanel.total_positions)
     setShowEditPanelLayoutModal(true)
   }
 
@@ -664,7 +672,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
   }
 
   const handleSaveLayout = async () => {
-    if (editLayoutPositions === panel.total_positions) {
+    if (editLayoutPositions === currentPanel.total_positions) {
       setShowEditPanelLayoutModal(false)
       return
     }
@@ -672,7 +680,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
     setIsUpdatingLayout(true)
 
     try {
-      if (editLayoutPositions < panel.total_positions) {
+      if (editLayoutPositions < currentPanel.total_positions) {
         // Removing rows - check if any entities are mapped to those positions
         const allBreakers = await window.electronAPI.breakers.listByPanel(panel.id)
         const allEntities = await window.electronAPI.entities.listByPanel(panel.id)
@@ -687,7 +695,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
         if (affectedEntities.length > 0) {
           const entityNames = affectedEntities.map(e => e.name).join(', ')
           const confirmed = confirm(
-            `Warning: ${affectedEntities.length} ${affectedEntities.length === 1 ? 'entity is' : 'entities are'} mapped to breaker positions ${editLayoutPositions + 1}-${panel.total_positions}.\n\n` +
+            `Warning: ${affectedEntities.length} ${affectedEntities.length === 1 ? 'entity is' : 'entities are'} mapped to breaker positions ${editLayoutPositions + 1}-${currentPanel.total_positions}.\n\n` +
             `Entities: ${entityNames}\n\n` +
             `These entities will be unmapped (not deleted) and you'll need to remap them to other breakers.\n\n` +
             `Continue?`
@@ -713,10 +721,10 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
       } else {
         // Adding rows - create new breakers
         const breakerInputs = Array.from(
-          { length: editLayoutPositions - panel.total_positions },
+          { length: editLayoutPositions - currentPanel.total_positions },
           (_, i) => ({
             panel_id: panel.id,
-            position: panel.total_positions + i + 1,
+            position: currentPanel.total_positions + i + 1,
             breaker_type: 'single-pole' as const,
             amperage: 15,
             status: 'spare' as const
@@ -948,9 +956,9 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
             </div>
           ) : (
             <div className="mb-4 flex items-center gap-2">
-              <h3 className="text-xl font-semibold">{panel.name}</h3>
+              <h3 className="text-xl font-semibold">{currentPanel.name}</h3>
               <button
-                onClick={() => { setEditingPanelId(panel.id); setEditingPanelName(panel.name) }}
+                onClick={() => { setEditingPanelId(panel.id); setEditingPanelName(currentPanel.name) }}
                 className="p-1.5 hover:bg-muted rounded transition-colors"
                 title="Rename panel"
               >
@@ -963,7 +971,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
           <div className="grid grid-cols-2 gap-4 text-sm mb-4">
             <div>
               <div className="text-muted-foreground mb-1">Total Positions</div>
-              <div className="text-lg font-semibold">{panel.total_positions}</div>
+              <div className="text-lg font-semibold">{currentPanel.total_positions}</div>
             </div>
             <div>
               <div className="text-muted-foreground mb-1">Main Breaker</div>
@@ -995,7 +1003,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
                   <button
                     onClick={() => {
                       setEditingMainBreakerAmperage(false)
-                      setMainBreakerAmperageValue(panel.main_breaker_amperage)
+                      setMainBreakerAmperageValue(currentPanel.main_breaker_amperage)
                     }}
                     className="p-1 text-muted-foreground hover:text-foreground"
                     title="Cancel"
@@ -1007,7 +1015,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <div className="text-lg font-semibold">{panel.main_breaker_amperage}A</div>
+                  <div className="text-lg font-semibold">{currentPanel.main_breaker_amperage}A</div>
                   <button
                     onClick={() => setEditingMainBreakerAmperage(true)}
                     className="p-1 text-muted-foreground hover:text-foreground"
@@ -1378,7 +1386,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
             </p>
             <div className="bg-muted/50 border border-border rounded-md p-3 mb-3">
               <p className="text-base font-semibold">
-                {panel.name}
+                {currentPanel.name}
               </p>
             </div>
             <p className="text-sm text-muted-foreground mb-2">
@@ -1433,7 +1441,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              placeholder={`Type "${panel.name}" to confirm`}
+              placeholder={`Type "${currentPanel.name}" to confirm`}
               autoFocus
               className="w-full px-3 py-2 border border-border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-destructive"
             />
@@ -1447,7 +1455,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
               </button>
               <button
                 onClick={handleConfirmStep2}
-                disabled={confirmText !== panel.name || isResetting}
+                disabled={confirmText !== currentPanel.name || isResetting}
                 className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 disabled:opacity-50"
               >
                 {isResetting ? 'Resetting...' : 'Reset Panel'}
@@ -1624,7 +1632,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
             </p>
             <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3 mb-4">
               <p className="text-base font-semibold text-destructive">
-                {panel.name}
+                {currentPanel.name}
               </p>
             </div>
             <p className="text-sm text-muted-foreground mb-2">
@@ -1642,7 +1650,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
               type="text"
               value={deletePanelConfirmText}
               onChange={(e) => setDeletePanelConfirmText(e.target.value)}
-              placeholder={`Type "${panel.name}" to confirm`}
+              placeholder={`Type "${currentPanel.name}" to confirm`}
               autoFocus
               className="w-full px-3 py-2 border border-border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-destructive"
             />
@@ -1659,7 +1667,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
               </button>
               <button
                 onClick={handleDeletePanel}
-                disabled={deletePanelConfirmText !== panel.name || isDeletingPanel}
+                disabled={deletePanelConfirmText !== currentPanel.name || isDeletingPanel}
                 className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 disabled:opacity-50"
               >
                 {isDeletingPanel ? 'Deleting...' : 'Delete Panel'}
@@ -1682,7 +1690,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
             <div className="p-6 border-b border-border">
               <h3 className="text-lg font-bold">Edit Panel Layout</h3>
               <p className="text-sm text-muted-foreground mt-1">
-                Add or remove rows from "{panel.name}"
+                Add or remove rows from "{currentPanel.name}"
               </p>
             </div>
 
@@ -1690,22 +1698,22 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
               <div className="space-y-4">
                 <div className="bg-muted/30 border border-border rounded-md p-4">
                   <p className="text-sm text-muted-foreground mb-3">
-                    Current: <strong>{panel.total_positions} positions</strong> ({panel.total_positions / 2} rows)
+                    Current: <strong>{currentPanel.total_positions} positions</strong> ({currentPanel.total_positions / 2} rows)
                   </p>
-                  {editLayoutPositions < panel.total_positions && (
+                  {editLayoutPositions < currentPanel.total_positions && (
                     <div className="bg-destructive/10 border border-destructive/20 rounded-md p-3">
                       <p className="text-sm text-destructive font-medium">
-                        ⚠️ Removing rows will delete breakers at positions {editLayoutPositions + 1}-{panel.total_positions}
+                        ⚠️ Removing rows will delete breakers at positions {editLayoutPositions + 1}-{currentPanel.total_positions}
                       </p>
                       <p className="text-xs text-destructive mt-1">
                         Any entities mapped to these breakers will be unmapped (not deleted)
                       </p>
                     </div>
                   )}
-                  {editLayoutPositions > panel.total_positions && (
+                  {editLayoutPositions > currentPanel.total_positions && (
                     <div className="bg-primary/10 border border-primary/20 rounded-md p-3">
                       <p className="text-sm text-primary font-medium">
-                        Adding {(editLayoutPositions - panel.total_positions) / 2} {(editLayoutPositions - panel.total_positions) / 2 === 1 ? 'row' : 'rows'} (positions {panel.total_positions + 1}-{editLayoutPositions})
+                        Adding {(editLayoutPositions - currentPanel.total_positions) / 2} {(editLayoutPositions - currentPanel.total_positions) / 2 === 1 ? 'row' : 'rows'} (positions {currentPanel.total_positions + 1}-{editLayoutPositions})
                       </p>
                     </div>
                   )}
@@ -1717,7 +1725,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
                     <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
                       {Array.from({ length: editLayoutPositions }, (_, i) => {
                         const position = i + 1
-                        const isNew = position > panel.total_positions
+                        const isNew = position > currentPanel.total_positions
                         const isRemoved = position > editLayoutPositions
 
                         return (
@@ -1775,7 +1783,7 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
                 </button>
                 <button
                   onClick={handleSaveLayout}
-                  disabled={isUpdatingLayout || editLayoutPositions === panel.total_positions}
+                  disabled={isUpdatingLayout || editLayoutPositions === currentPanel.total_positions}
                   className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50"
                 >
                   {isUpdatingLayout ? 'Updating...' : 'Save Changes'}
