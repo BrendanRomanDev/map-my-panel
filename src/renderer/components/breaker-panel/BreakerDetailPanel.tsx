@@ -237,16 +237,28 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     if (!breakerToConvert) return
 
     try {
-      // Convert the breaker to double-pole
+      // Convert the breaker to double-pole and link it back to the current breaker
       await window.electronAPI.breakers.update(breakerToConvert, {
-        breaker_type: 'double-pole'
+        breaker_type: 'double-pole',
+        linked_breaker_id: breaker.id
       })
 
-      // Set the link
+      // Update the current breaker to link to the converted breaker
+      await window.electronAPI.breakers.update(breaker.id, {
+        linked_breaker_id: breakerToConvert
+      })
+
+      // Set the link in local state
       setLinkedBreakerId(breakerToConvert)
 
-      // Refresh breakers data
-      queryClient.invalidateQueries({ queryKey: queryKeys.breakers.byPanel(panelId) })
+      // Update original values since we already saved the link to the database
+      setOriginalValues(prev => ({
+        ...prev,
+        linkedBreakerId: breakerToConvert
+      }))
+
+      // Refresh breakers data immediately (refetch instead of invalidate to ensure data is fresh)
+      await queryClient.refetchQueries({ queryKey: queryKeys.breakers.byPanel(panelId) })
 
       // Close dialog
       setShowConvertConfirm(false)
