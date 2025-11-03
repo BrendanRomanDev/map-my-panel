@@ -580,6 +580,7 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         isOpen={isAssignModalOpen}
         onClose={() => setIsAssignModalOpen(false)}
         onAssign={handleAssignEntities}
+        currentLinkedBreakerId={linkedBreakerId}
       />
 
       {/* Delete Confirmation Modal */}

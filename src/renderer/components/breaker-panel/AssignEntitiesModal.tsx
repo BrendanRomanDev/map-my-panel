@@ -9,9 +9,10 @@ interface AssignEntitiesModalProps {
   isOpen: boolean
   onClose: () => void
   onAssign: (entityIds: string[]) => void
+  currentLinkedBreakerId?: string | null
 }
 
-export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAssign }: AssignEntitiesModalProps) {
+export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAssign, currentLinkedBreakerId }: AssignEntitiesModalProps) {
   const { data: unmappedEntities } = useUnmappedEntities(panelId)
   const { data: breakers } = useBreakers(panelId)
 
@@ -19,16 +20,25 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAss
   const [showAddEntityModal, setShowAddEntityModal] = useState(false)
 
   // Calculate initial breaker IDs for visual hint (include linked partner for double-pole)
+  // Use current state from parent drawer if available, otherwise use stale breaker data
   const initialBreakerIds = useMemo(() => {
-    const currentBreaker = breakers?.find(b => b.id === breakerId)
-    if (!currentBreaker) return [breakerId]
-
     const ids = [breakerId]
-    if (currentBreaker.linked_breaker_id) {
-      ids.push(currentBreaker.linked_breaker_id)
+
+    // If parent provided current linked breaker state, use that (drawer hasn't been saved yet)
+    if (currentLinkedBreakerId !== undefined) {
+      if (currentLinkedBreakerId) {
+        ids.push(currentLinkedBreakerId)
+      }
+    } else {
+      // Otherwise fall back to fetched breaker data
+      const currentBreaker = breakers?.find(b => b.id === breakerId)
+      if (currentBreaker?.linked_breaker_id) {
+        ids.push(currentBreaker.linked_breaker_id)
+      }
     }
+
     return ids
-  }, [breakers, breakerId])
+  }, [breakers, breakerId, currentLinkedBreakerId])
 
   if (!isOpen) return null
 
