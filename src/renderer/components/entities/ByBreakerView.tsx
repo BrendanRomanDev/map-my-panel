@@ -51,12 +51,12 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all' 
   const breakersWithEntities = breakers
     .map(breaker => ({
       breaker,
-      entities: entities.filter(e => e.breaker_id === breaker.id)
+      entities: entities.filter(e => e.breaker_ids.includes(breaker.id))
     }))
     .filter(({ entities }) => entities.length > 0) // Only show breakers with entities
 
   // Get unmapped entities
-  const unmappedEntities = entities.filter(e => e.breaker_id === null)
+  const unmappedEntities = entities.filter(e => e.breaker_ids.length === 0)
 
   if (breakersWithEntities.length === 0 && unmappedEntities.length === 0) {
     return (
