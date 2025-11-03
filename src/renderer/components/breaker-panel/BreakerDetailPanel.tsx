@@ -375,9 +375,9 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     : null
 
   return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-background border-l border-border shadow-lg overflow-auto">
-      <div className="p-6 space-y-6">
-        {/* Header */}
+    <div className="fixed inset-y-0 right-0 w-96 bg-background border-l border-border shadow-lg flex flex-col">
+      {/* Header */}
+      <div className="flex-shrink-0 p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold">
@@ -395,6 +395,10 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
             ✕
           </button>
         </div>
+      </div>
+
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-auto p-6 space-y-6">
 
         {/* Form */}
         <div className="space-y-4">
@@ -599,9 +603,11 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
             </div>
           )}
         </div>
+      </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 pt-4 border-t border-border">
+      {/* Sticky Footer with Actions */}
+      <div className="flex-shrink-0 p-6 border-t border-border bg-background">
+        <div className="flex gap-2">
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2 border border-border rounded-md hover:bg-muted"
