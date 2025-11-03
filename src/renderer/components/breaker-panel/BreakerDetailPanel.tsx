@@ -29,6 +29,8 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showConvertConfirm, setShowConvertConfirm] = useState(false)
+  const [breakerToConvert, setBreakerToConvert] = useState<string | null>(null)
 
   // Track original values for dirty detection
   const [originalValues, setOriginalValues] = useState({
@@ -91,6 +93,23 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         is_powered: isPowered,
         linked_breaker_id: linkedBreakerId
       })
+
+      // Handle bidirectional linking for double-pole breakers
+      if (linkedBreakerId !== originalValues.linkedBreakerId) {
+        // If previously linked to a different breaker, clear that link
+        if (originalValues.linkedBreakerId && originalValues.linkedBreakerId !== linkedBreakerId) {
+          await window.electronAPI.breakers.update(originalValues.linkedBreakerId, {
+            linked_breaker_id: null
+          })
+        }
+
+        // If now linked to a new breaker, update it to link back
+        if (linkedBreakerId) {
+          await window.electronAPI.breakers.update(linkedBreakerId, {
+            linked_breaker_id: breaker.id
+          })
+        }
+      }
 
       // Update entity assignments
       const originalIds = originalValues.entityIds
@@ -192,6 +211,57 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     setIsAssignModalOpen(false)
   }
 
+  const handleLinkedBreakerChange = (selectedBreakerId: string) => {
+    if (!selectedBreakerId) {
+      // User selected "Not linked"
+      setLinkedBreakerId(null)
+      return
+    }
+
+    // Find the selected breaker
+    const selectedBreaker = allBreakers?.find(b => b.id === selectedBreakerId)
+    if (!selectedBreaker) return
+
+    // Check if the selected breaker is double-pole
+    if (selectedBreaker.breaker_type !== 'double-pole') {
+      // Show confirmation dialog to convert it
+      setBreakerToConvert(selectedBreakerId)
+      setShowConvertConfirm(true)
+    } else {
+      // Already double-pole, just set the link
+      setLinkedBreakerId(selectedBreakerId)
+    }
+  }
+
+  const handleConfirmConvert = async () => {
+    if (!breakerToConvert) return
+
+    try {
+      // Convert the breaker to double-pole
+      await window.electronAPI.breakers.update(breakerToConvert, {
+        breaker_type: 'double-pole'
+      })
+
+      // Set the link
+      setLinkedBreakerId(breakerToConvert)
+
+      // Refresh breakers data
+      queryClient.invalidateQueries({ queryKey: queryKeys.breakers.byPanel(panelId) })
+
+      // Close dialog
+      setShowConvertConfirm(false)
+      setBreakerToConvert(null)
+    } catch (error) {
+      console.error('Failed to convert breaker to double-pole:', error)
+      alert('Failed to convert breaker to double-pole')
+    }
+  }
+
+  const handleCancelConvert = () => {
+    setShowConvertConfirm(false)
+    setBreakerToConvert(null)
+  }
+
   const handleDeleteTandem = async () => {
     if (!breaker) return
 
@@ -228,11 +298,11 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     }
   }
 
-  // Get available breakers for linking (double-pole)
-  // Allow breakers that are either unlinked OR linked to the current breaker (for bidirectional display)
+  // Get available breakers for linking
+  // Allow any breaker that is either unlinked OR linked to the current breaker (for bidirectional display)
+  // We'll validate and potentially convert single-pole to double-pole when selected
   const availableBreakersForLinking = allBreakers?.filter(b =>
     b.id !== breaker.id &&
-    b.breaker_type === 'double-pole' &&
     (!b.linked_breaker_id || b.linked_breaker_id === breaker.id)
   ) || []
 
@@ -309,7 +379,14 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
             </label>
             <select
               value={breakerType}
-              onChange={e => setBreakerType(e.target.value as 'single-pole' | 'double-pole')}
+              onChange={e => {
+                const newType = e.target.value as 'single-pole' | 'double-pole'
+                setBreakerType(newType)
+                // If changing to single-pole, clear any linked breaker
+                if (newType === 'single-pole' && linkedBreakerId) {
+                  setLinkedBreakerId(null)
+                }
+              }}
               className="w-full px-3 py-2 border border-input rounded-md bg-background"
             >
               <option value="single-pole">Single-Pole (120V)</option>
@@ -358,7 +435,7 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
               </label>
               <select
                 value={linkedBreakerId || ''}
-                onChange={e => setLinkedBreakerId(e.target.value || null)}
+                onChange={e => handleLinkedBreakerChange(e.target.value)}
                 className="w-full px-3 py-2 border border-input rounded-md bg-background"
               >
                 <option value="">Not linked</option>
@@ -367,6 +444,7 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
                     Position {b.position}
                     {b.position_slot && b.position_slot}
                     {b.label && ` - ${b.label}`}
+                    {b.breaker_type === 'single-pole' && ' (Single-Pole)'}
                   </option>
                 ))}
               </select>
@@ -518,6 +596,38 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
                 className="px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 disabled:opacity-50"
               >
                 {isDeleting ? 'Deleting...' : 'Delete Breaker'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Convert to Double-Pole Confirmation Modal */}
+      {showConvertConfirm && breakerToConvert && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
+          <div className="bg-background border border-border rounded-lg shadow-lg w-[400px] p-6">
+            <h3 className="text-lg font-bold mb-2">Convert Breaker to Double-Pole?</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              The breaker you're trying to link to (<strong>
+                {allBreakers?.find(b => b.id === breakerToConvert)?.position}
+                {allBreakers?.find(b => b.id === breakerToConvert)?.position_slot}
+              </strong>) is currently a single-pole breaker.
+            </p>
+            <p className="text-sm text-muted-foreground mb-4">
+              Would you like to convert it to a double-pole breaker and create the link?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={handleCancelConvert}
+                className="px-4 py-2 border border-border rounded-md hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmConvert}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+              >
+                Convert to Double-Pole
               </button>
             </div>
           </div>
