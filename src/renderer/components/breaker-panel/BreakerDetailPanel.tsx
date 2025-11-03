@@ -347,12 +347,21 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
   }
 
   // Get available breakers for linking
-  // Allow any breaker that is either unlinked OR linked to the current breaker (for bidirectional display)
-  // We'll validate and potentially convert single-pole to double-pole when selected
-  const availableBreakersForLinking = allBreakers?.filter(b =>
-    b.id !== breaker.id &&
-    (!b.linked_breaker_id || b.linked_breaker_id === breaker.id)
-  ) || []
+  // For double-pole breakers, restrict to adjacent positions (directly above or below)
+  // In a standard 2-column panel, breakers link vertically (position ±2)
+  const availableBreakersForLinking = allBreakers?.filter(b => {
+    if (b.id === breaker.id) return false
+
+    // Only allow breakers that are unlinked OR already linked to current breaker
+    if (b.linked_breaker_id && b.linked_breaker_id !== breaker.id) return false
+
+    // Calculate adjacent positions (above = position - 2, below = position + 2)
+    const currentPosition = breaker.position
+    const adjacentPositions = [currentPosition - 2, currentPosition + 2]
+
+    // Allow breakers at adjacent positions (including tandems at those positions)
+    return adjacentPositions.includes(b.position)
+  }) || []
 
   // Find linked breaker if exists
   const linkedBreaker = linkedBreakerId
