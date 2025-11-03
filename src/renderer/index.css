@@ -233,4 +233,14 @@
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.2s ease, color 0.2s ease;
   }
+
+  /* Fix placeholder text contrast for dark modes */
+  input::placeholder,
+  textarea::placeholder {
+    @apply text-muted-foreground opacity-70;
+  }
+
+  select {
+    @apply text-foreground;
+  }
 }
