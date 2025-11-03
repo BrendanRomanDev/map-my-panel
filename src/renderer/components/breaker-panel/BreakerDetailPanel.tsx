@@ -94,6 +94,19 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         linked_breaker_id: linkedBreakerId
       })
 
+      // If changing from double-pole to single-pole, unassign all entities from this breaker
+      if (originalValues.breakerType === 'double-pole' && breakerType === 'single-pole') {
+        // Get all entities currently assigned to this breaker
+        const entitiesToUnassign = allEntities?.filter(e => e.breaker_ids.includes(breaker.id)) || []
+        for (const entity of entitiesToUnassign) {
+          // Remove this breaker from the entity's breaker_ids
+          const newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
+          await window.electronAPI.entities.update(entity.id, { breaker_ids: newBreakerIds })
+        }
+        // Clear the local assignedEntityIds since we unassigned everything
+        setAssignedEntityIds(new Set())
+      }
+
       // Handle bidirectional linking for double-pole breakers
       if (linkedBreakerId !== originalValues.linkedBreakerId) {
         // If previously linked to a different breaker, clear that link
