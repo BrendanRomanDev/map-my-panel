@@ -98,56 +98,31 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
 
   return (
     <div className="space-y-6">
-      {/* Panel header with stats */}
+      {/* Panel header with capacity */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold">{panel.name}</h2>
-          <p className="text-sm text-muted-foreground">
-            {panel.total_positions} positions • {panel.main_breaker_amperage}A main breaker
-          </p>
+        <h2 className="text-xl font-bold">{panel.name}</h2>
+        <div className="text-2xl font-bold">
+          {totalAmperage}A / {panel.main_breaker_amperage}A
         </div>
-        <div className="text-right">
-          <div className="text-2xl font-bold">
-            {totalAmperage}A used of {panel.main_breaker_amperage}A capacity
-          </div>
-          <div className="text-sm text-muted-foreground flex items-center justify-end gap-1.5">
-            <span>
-              {totalCircuits} {totalCircuits === 1 ? 'circuit' : 'circuits'}: {activeCircuits} active • {spareCircuits} spare • {poweredOnCircuits} on • {poweredOffCircuits} off
-            </span>
-            <span
-              className="inline-flex items-center text-muted-foreground hover:text-foreground cursor-help"
-              title={`Your breakers total ${sumOfAllBreakers}A, which is normal. Panels are designed with more breaker capacity than the main service rating because not all circuits draw maximum power at once. This is called "oversubscription" and is safe by design.`}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-            </span>
-          </div>
-          {/* Capacity bar */}
-          <div className="mt-2 w-64 h-2 bg-muted rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all ${
-                usagePercent > 80
-                  ? 'bg-destructive'
-                  : usagePercent > 60
-                  ? 'bg-yellow-500'
-                  : 'bg-primary'
-              }`}
-              style={{ width: `${Math.min(usagePercent, 100)}%` }}
-            />
-          </div>
+      </div>
+
+      {/* Metadata section */}
+      <div className="space-y-2">
+        <div className="text-sm text-muted-foreground">
+          {panel.total_positions} positions • {totalCircuits} {totalCircuits === 1 ? 'circuit' : 'circuits'} • {activeCircuits} active • {spareCircuits} spare • {poweredOnCircuits} on • {poweredOffCircuits} off
+        </div>
+        {/* Capacity bar */}
+        <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+          <div
+            className={`h-full transition-all ${
+              usagePercent > 80
+                ? 'bg-destructive'
+                : usagePercent > 60
+                ? 'bg-yellow-500'
+                : 'bg-primary'
+            }`}
+            style={{ width: `${Math.min(usagePercent, 100)}%` }}
+          />
         </div>
       </div>
 
