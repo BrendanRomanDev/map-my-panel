@@ -11,7 +11,7 @@ interface AddEntityModalProps {
   isOpen: boolean
   onClose: () => void
   initialBreakerIds?: string[]
-  onEntityCreated?: (wasAssignedToBreakers: boolean) => void
+  onEntityCreated?: () => void
 }
 
 export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, onEntityCreated }: AddEntityModalProps) {
@@ -74,9 +74,8 @@ export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, on
         console.error('Post-creation operations failed:', postError)
       }
 
-      // Notify parent whether entity was assigned to breakers
-      const wasAssignedToBreakers = breakerIds.length > 0
-      onEntityCreated?.(wasAssignedToBreakers)
+      // Notify parent that entity was created
+      onEntityCreated?.()
 
       // Reset form and close - entity was created successfully
       setEntityType('outlet')

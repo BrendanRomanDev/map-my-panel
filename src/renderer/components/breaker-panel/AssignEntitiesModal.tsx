@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useUnmappedEntities } from '../../hooks/useEntities'
-import { useBreakers } from '../../hooks/useBreakers'
 import { AddEntityModal } from '../entities/AddEntityModal'
 
 interface AssignEntitiesModalProps {
@@ -13,22 +12,9 @@ interface AssignEntitiesModalProps {
 
 export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAssign }: AssignEntitiesModalProps) {
   const { data: unmappedEntities } = useUnmappedEntities(panelId)
-  const { data: breakers } = useBreakers(panelId)
 
   const [selectedEntityIds, setSelectedEntityIds] = useState<Set<string>>(new Set())
   const [showAddEntityModal, setShowAddEntityModal] = useState(false)
-
-  // Calculate initial breaker IDs for new entities (include linked partner for double-pole)
-  const initialBreakerIds = useMemo(() => {
-    const currentBreaker = breakers?.find(b => b.id === breakerId)
-    if (!currentBreaker) return [breakerId]
-
-    const ids = [breakerId]
-    if (currentBreaker.linked_breaker_id) {
-      ids.push(currentBreaker.linked_breaker_id)
-    }
-    return ids
-  }, [breakers, breakerId])
 
   if (!isOpen) return null
 
@@ -55,15 +41,10 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAss
     onClose()
   }
 
-  const handleEntityCreated = (wasAssignedToBreakers: boolean) => {
-    // Close the add entity modal
+  const handleEntityCreated = () => {
+    // Close the add entity modal - entity will appear in unmapped list
     setShowAddEntityModal(false)
-
-    // If entity was assigned to breakers, close this modal too (job done!)
-    // If entity was unmapped, stay in this modal so user can assign it
-    if (wasAssignedToBreakers) {
-      onClose()
-    }
+    // Stay in this modal so user can select and assign the new entity
   }
 
   return (
@@ -80,17 +61,19 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAss
 
           {/* Entity list */}
           <div className="flex-1 overflow-auto p-6">
+            {/* Always show create button at top */}
+            <button
+              onClick={() => setShowAddEntityModal(true)}
+              className="w-full px-4 py-2 mb-4 border-2 border-dashed border-border rounded-md hover:border-primary hover:bg-muted/50 transition-colors text-sm font-medium"
+            >
+              + Create New Entity
+            </button>
+
             {!unmappedEntities || unmappedEntities.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="text-muted-foreground mb-4">
+              <div className="text-center py-8">
+                <div className="text-sm text-muted-foreground">
                   No unmapped entities available
                 </div>
-                <button
-                  onClick={() => setShowAddEntityModal(true)}
-                  className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
-                >
-                  + Create New Entity
-                </button>
               </div>
             ) : (
               <div className="space-y-2">
@@ -149,12 +132,11 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAss
         </div>
       </div>
 
-      {/* Add Entity Modal */}
+      {/* Add Entity Modal - create as unmapped, user will assign via "Assign" button */}
       <AddEntityModal
         panelId={panelId}
         isOpen={showAddEntityModal}
         onClose={() => setShowAddEntityModal(false)}
-        initialBreakerIds={initialBreakerIds}
         onEntityCreated={handleEntityCreated}
       />
     </>
