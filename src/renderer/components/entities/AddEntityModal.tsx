@@ -20,7 +20,7 @@ export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps
   const [name, setName] = useState('')
   const [room, setRoom] = useState('')
   const [location, setLocation] = useState('')
-  const [breakerId, setBreakerId] = useState<string | null>(null)
+  const [breakerIds, setBreakerIds] = useState<string[]>([])
   const [isSaving, setIsSaving] = useState(false)
 
   if (!isOpen) return null
@@ -32,7 +32,7 @@ export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps
     try {
       const input: CreateEntityInput = {
         panel_id: panelId,
-        breaker_id: breakerId,
+        breaker_ids: breakerIds,
         entity_type: entityType,
         name: name.trim(),
         room: room.trim() || null,
@@ -46,36 +46,31 @@ export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps
       // Entity created successfully - now do best-effort post-creation operations
       // If these fail, we still want to close the modal since the entity was created
       try {
-        // Auto-activate breaker if this is the first entity on it
-        if (breakerId) {
-          const entitiesOnBreaker = await window.electronAPI.entities.listByBreaker(breakerId)
+        // Invalidate all relevant queries
+        const queriesToInvalidate = [
+          queryKeys.entities.byPanel(panelId),
+          queryKeys.entities.byRoom(panelId),
+          queryKeys.entities.unmapped(panelId),
+          queryKeys.breakers.byPanel(panelId),
+          ...breakerIds.map(breakerId => queryKeys.entities.byBreaker(breakerId))
+        ]
 
-          // If this is the only entity on this breaker, set it to "on"
-          if (entitiesOnBreaker.length === 1) {
-            await window.electronAPI.breakers.update(breakerId, {
-              status: 'on'
-            })
-          }
-        }
+        await Promise.all(
+          queriesToInvalidate.map(queryKey =>
+            queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
+          )
+        )
       } catch (postError) {
         // Log but don't block - entity was created successfully
         console.error('Post-creation operations failed:', postError)
       }
-
-      // Invalidate all relevant queries - use helper function and refetch
-      const queriesToInvalidate = invalidateEntityBreakerQueries(panelId, null, breakerId)
-      await Promise.all(
-        queriesToInvalidate.map(queryKey =>
-          queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
-        )
-      )
 
       // Reset form and close - entity was created successfully
       setEntityType('outlet')
       setName('')
       setRoom('')
       setLocation('')
-      setBreakerId(null)
+      setBreakerIds([])
       onClose()
     } catch (error) {
       console.error('Failed to create entity:', error)
@@ -90,7 +85,7 @@ export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps
     setName('')
     setRoom('')
     setLocation('')
-    setBreakerId(null)
+    setBreakerIds([])
     onClose()
   }
 
@@ -154,22 +149,51 @@ export function AddEntityModal({ panelId, isOpen, onClose }: AddEntityModalProps
             />
           </div>
 
-          {/* Breaker */}
+          {/* Breaker Assignment */}
           <div>
-            <label className="block text-sm font-medium mb-1">Breaker</label>
-            <select
-              value={breakerId || ''}
-              onChange={(e) => setBreakerId(e.target.value || null)}
-              className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="">Unknown / Not Assigned</option>
-              {breakers?.map(breaker => (
-                <option key={breaker.id} value={breaker.id}>
-                  Position {breaker.position}{breaker.position_slot || ''} - {breaker.amperage}A
-                  {breaker.label ? ` (${breaker.label})` : ''}
-                </option>
-              ))}
-            </select>
+            <label className="block text-sm font-medium mb-2">Breakers (optional)</label>
+            {!breakers || breakers.length === 0 ? (
+              <div className="text-sm text-muted-foreground italic">
+                No breakers available
+              </div>
+            ) : (
+              <div className="max-h-[200px] overflow-y-auto border border-input rounded-md bg-background">
+                {breakers.map(breaker => {
+                  const isChecked = breakerIds.includes(breaker.id)
+                  return (
+                    <label
+                      key={breaker.id}
+                      className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${
+                        isChecked ? 'bg-primary/5' : ''
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setBreakerIds([...breakerIds, breaker.id])
+                          } else {
+                            setBreakerIds(breakerIds.filter(id => id !== breaker.id))
+                          }
+                        }}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-sm flex-1">
+                        Position {breaker.position}{breaker.position_slot || ''}
+                        {breaker.label && ` - ${breaker.label}`}
+                        {' '}({breaker.amperage}A{breaker.breaker_type === 'double-pole' ? ', DP' : ''})
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+            {breakerIds.length > 0 && (
+              <div className="text-xs text-muted-foreground mt-2">
+                {breakerIds.length} breaker{breakerIds.length === 1 ? '' : 's'} selected
+              </div>
+            )}
           </div>
         </div>
 

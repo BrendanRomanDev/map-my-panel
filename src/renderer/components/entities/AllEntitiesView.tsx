@@ -18,8 +18,8 @@ export function AllEntitiesView({ panelId, mappedFilter = 'all', typeFilter = 'a
   // Filter entities by mapped status, type, and room
   const entities = allEntities?.filter(entity =>
     (mappedFilter === 'all' ||
-     (mappedFilter === 'mapped' && entity.breaker_id !== null) ||
-     (mappedFilter === 'unmapped' && entity.breaker_id === null)) &&
+     (mappedFilter === 'mapped' && entity.breaker_ids.length > 0) ||
+     (mappedFilter === 'unmapped' && entity.breaker_ids.length === 0)) &&
     (typeFilter === 'all' || entity.entity_type === typeFilter) &&
     (roomFilter === 'all' || entity.room === roomFilter)
   )

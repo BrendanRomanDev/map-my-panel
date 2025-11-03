@@ -55,7 +55,7 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, showDeleteConfirm, name, entityType, room, location, breakerId])
+  }, [isOpen, showDeleteConfirm, name, entityType, room, location, breakerIds])
 
   if (!isOpen || !entity) return null
 
@@ -68,8 +68,8 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
 
     setIsSaving(true)
     try {
-      const oldBreakerId = entity.breaker_id
-      const newBreakerId = breakerId
+      const oldBreakerIds = entity.breaker_ids
+      const newBreakerIds = breakerIds
 
       // Update the entity - this is the critical operation
       await window.electronAPI.entities.update(entity.id, {
@@ -77,27 +77,22 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
         entity_type: entityType,
         room: room.trim() || null,
         location: location.trim() || null,
-        breaker_id: breakerId
+        breaker_ids: breakerIds
       })
 
       // Entity updated successfully - now do best-effort post-update operations
       // If these fail, we still want to close the modal since the entity was updated
       try {
-        // Auto-activate breaker if this is the first entity on it
-        // Only if breaker changed and we're assigning to a new breaker
-        if (newBreakerId && oldBreakerId !== newBreakerId) {
-          const entitiesOnNewBreaker = await window.electronAPI.entities.listByBreaker(newBreakerId)
+        // Invalidate all relevant queries for old and new breakers
+        const allAffectedBreakerIds = [...new Set([...oldBreakerIds, ...newBreakerIds])]
+        const queriesToInvalidate = [
+          queryKeys.entities.byPanel(entity.panel_id),
+          queryKeys.entities.byRoom(entity.panel_id),
+          queryKeys.entities.unmapped(entity.panel_id),
+          queryKeys.breakers.byPanel(entity.panel_id),
+          ...allAffectedBreakerIds.map(breakerId => queryKeys.entities.byBreaker(breakerId))
+        ]
 
-          // If this is the only entity on this breaker, set it to "on"
-          if (entitiesOnNewBreaker.length === 1) {
-            await window.electronAPI.breakers.update(newBreakerId, {
-              status: 'on'
-            })
-          }
-        }
-
-        // Invalidate all relevant queries - use helper function and refetch
-        const queriesToInvalidate = invalidateEntityBreakerQueries(entity.panel_id, entity.breaker_id, breakerId)
         await Promise.all(
           queriesToInvalidate.map(queryKey =>
             queryClient.invalidateQueries({ queryKey, refetchType: 'active' })
@@ -123,7 +118,14 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
       await window.electronAPI.entities.delete(entity.id)
 
       // Invalidate queries to refresh data
-      const queriesToInvalidate = invalidateEntityBreakerQueries(entity.panel_id, entity.breaker_id, null)
+      const queriesToInvalidate = [
+        queryKeys.entities.byPanel(entity.panel_id),
+        queryKeys.entities.byRoom(entity.panel_id),
+        queryKeys.entities.unmapped(entity.panel_id),
+        queryKeys.breakers.byPanel(entity.panel_id),
+        ...entity.breaker_ids.map(breakerId => queryKeys.entities.byBreaker(breakerId))
+      ]
+
       queriesToInvalidate.forEach(queryKey => {
         queryClient.invalidateQueries({ queryKey })
       })
@@ -220,24 +222,51 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
 
             {/* Breaker Assignment */}
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Assigned Breaker (optional)
+              <label className="block text-sm font-medium mb-2">
+                Assigned Breakers (optional)
               </label>
-              <select
-                value={breakerId || ''}
-                onChange={e => setBreakerId(e.target.value || null)}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background"
-              >
-                <option value="">Unknown / Not assigned</option>
-                {allBreakers?.map(breaker => (
-                  <option key={breaker.id} value={breaker.id}>
-                    Position {breaker.position}
-                    {breaker.position_slot && breaker.position_slot}
-                    {breaker.label && ` - ${breaker.label}`}
-                    {' '}({breaker.amperage}A)
-                  </option>
-                ))}
-              </select>
+              {!allBreakers || allBreakers.length === 0 ? (
+                <div className="text-sm text-muted-foreground italic">
+                  No breakers available
+                </div>
+              ) : (
+                <div className="max-h-[200px] overflow-y-auto border border-input rounded-md bg-background">
+                  {allBreakers.map(breaker => {
+                    const isChecked = breakerIds.includes(breaker.id)
+                    return (
+                      <label
+                        key={breaker.id}
+                        className={`flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${
+                          isChecked ? 'bg-primary/5' : ''
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setBreakerIds([...breakerIds, breaker.id])
+                            } else {
+                              setBreakerIds(breakerIds.filter(id => id !== breaker.id))
+                            }
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm flex-1">
+                          Position {breaker.position}{breaker.position_slot || ''}
+                          {breaker.label && ` - ${breaker.label}`}
+                          {' '}({breaker.amperage}A{breaker.breaker_type === 'double-pole' ? ', DP' : ''})
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              )}
+              {breakerIds.length > 0 && (
+                <div className="text-xs text-muted-foreground mt-2">
+                  {breakerIds.length} breaker{breakerIds.length === 1 ? '' : 's'} selected
+                </div>
+              )}
             </div>
           </div>
 
