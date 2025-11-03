@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { queryKeys } from '../../lib/queryKeys'
 import { generatePanelPDF } from '../../utils/pdfExport'
+import { useTheme } from '../../contexts/ThemeContext'
 import type { Panel, Property } from '@shared/types'
 
 interface SettingsViewProps {
@@ -13,6 +14,7 @@ interface SettingsViewProps {
 
 export function SettingsView({ property, panel, onReset, onPropertyChange }: SettingsViewProps) {
   const queryClient = useQueryClient()
+  const { theme, setTheme, availableThemes } = useTheme()
 
   // Fetch property data locally to ensure UI updates when types are deleted
   const { data: localProperty } = useQuery({
@@ -742,6 +744,34 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
       {/* Properties Tab Content */}
       {activeTab === 'properties' && (
         <div className="space-y-6">
+          {/* Theme Selection Section */}
+          <div>
+            <h2 className="text-lg font-semibold mb-3">Appearance</h2>
+            <div className="bg-muted/30 border border-border rounded-lg p-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Color Theme
+                  </label>
+                  <select
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value as any)}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    {Object.values(availableThemes).map((themeOption) => (
+                      <option key={themeOption.id} value={themeOption.id}>
+                        {themeOption.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {availableThemes[theme]?.description || 'Theme description'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Manage Properties Section */}
           <div>
         <h2 className="text-lg font-semibold mb-3">Manage Properties</h2>

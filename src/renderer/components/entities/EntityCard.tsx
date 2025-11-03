@@ -23,7 +23,7 @@ export function EntityCard({ entity, onClick, onEdit }: EntityCardProps) {
         <div className="flex-1 min-w-0">
           <div className="font-medium truncate">{entity.name}</div>
           <div className="text-sm text-muted-foreground mt-1">
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary">
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary text-secondary-foreground">
               {entity.entity_type}
             </span>
             {entity.room && (

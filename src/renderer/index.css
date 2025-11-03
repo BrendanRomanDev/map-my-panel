@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @layer base {
+  /* Default Theme (Original) */
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
@@ -25,6 +26,198 @@
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
   }
+
+  /* Electrical Industrial Light */
+  [data-theme="electrical-light"] {
+    --background: 0 0% 98%;
+    --foreground: 215 25% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 15%;
+    --primary: 25 95% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 215 15% 92%;
+    --muted-foreground: 215 15% 45%;
+    --accent: 199 89% 48%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 20% 82%;
+    --input: 215 20% 85%;
+    --ring: 25 95% 53%;
+    --radius: 0.375rem;
+  }
+
+  /* Electrical Industrial Dark */
+  [data-theme="electrical-dark"] {
+    --background: 215 28% 12%;
+    --foreground: 0 0% 98%;
+    --card: 215 25% 17%;
+    --card-foreground: 0 0% 98%;
+    --popover: 215 25% 17%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 25 95% 53%;
+    --primary-foreground: 215 28% 12%;
+    --secondary: 215 20% 30%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 215 20% 22%;
+    --muted-foreground: 215 15% 65%;
+    --accent: 199 89% 58%;
+    --accent-foreground: 215 28% 12%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 20% 25%;
+    --input: 215 20% 25%;
+    --ring: 25 95% 53%;
+    --radius: 0.375rem;
+  }
+
+  /* Clean Professional Light */
+  [data-theme="professional-light"] {
+    --background: 40 10% 98%;
+    --foreground: 210 24% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 210 24% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 24% 16%;
+    --primary: 162 73% 35%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 41 31% 62%;
+    --secondary-foreground: 210 24% 16%;
+    --muted: 210 20% 94%;
+    --muted-foreground: 210 12% 48%;
+    --accent: 41 31% 62%;
+    --accent-foreground: 210 24% 16%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 20% 88%;
+    --input: 210 20% 88%;
+    --ring: 162 73% 35%;
+    --radius: 0.75rem;
+  }
+
+  /* Clean Professional Dark */
+  [data-theme="professional-dark"] {
+    --background: 210 24% 10%;
+    --foreground: 40 10% 98%;
+    --card: 210 24% 15%;
+    --card-foreground: 40 10% 98%;
+    --popover: 210 24% 15%;
+    --popover-foreground: 40 10% 98%;
+    --primary: 162 73% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 41 31% 52%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 20% 22%;
+    --muted-foreground: 210 12% 65%;
+    --accent: 41 31% 52%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 210 20% 25%;
+    --input: 210 20% 25%;
+    --ring: 162 73% 45%;
+    --radius: 0.75rem;
+  }
+
+  /* Utility Dashboard Dark */
+  [data-theme="utility-dark"] {
+    --background: 216 28% 7%;
+    --foreground: 210 40% 98%;
+    --card: 216 25% 12%;
+    --card-foreground: 210 40% 98%;
+    --popover: 216 25% 12%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 187 85% 53%;
+    --primary-foreground: 216 28% 7%;
+    --secondary: 210 20% 35%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 210 20% 20%;
+    --muted-foreground: 210 20% 65%;
+    --accent: 45 93% 58%;
+    --accent-foreground: 216 28% 7%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 210 20% 25%;
+    --input: 210 20% 25%;
+    --ring: 187 85% 53%;
+    --radius: 0.25rem;
+  }
+
+  /* Modern Slate Light */
+  [data-theme="slate-light"] {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 25%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 215 16% 47%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 47% 25%;
+    --radius: 0.5rem;
+  }
+
+  /* Nord-Inspired Dark */
+  [data-theme="nord-dark"] {
+    --background: 220 16% 22%;
+    --foreground: 218 27% 94%;
+    --card: 220 16% 28%;
+    --card-foreground: 218 27% 94%;
+    --popover: 220 16% 28%;
+    --popover-foreground: 218 27% 94%;
+    --primary: 193 43% 67%;
+    --primary-foreground: 220 16% 15%;
+    --secondary: 179 25% 55%;
+    --secondary-foreground: 220 16% 15%;
+    --muted: 220 17% 32%;
+    --muted-foreground: 218 20% 70%;
+    --accent: 179 25% 55%;
+    --accent-foreground: 220 16% 15%;
+    --destructive: 354 42% 56%;
+    --destructive-foreground: 218 27% 94%;
+    --border: 220 17% 35%;
+    --input: 220 17% 35%;
+    --ring: 193 43% 67%;
+    --radius: 0.5rem;
+  }
+
+  /* Ocean Breeze Light */
+  [data-theme="ocean-light"] {
+    --background: 200 20% 98%;
+    --foreground: 200 30% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 200 30% 15%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 30% 15%;
+    --primary: 195 85% 45%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 160 60% 50%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 200 20% 94%;
+    --muted-foreground: 200 15% 45%;
+    --accent: 160 60% 50%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 200 20% 88%;
+    --input: 200 20% 88%;
+    --ring: 195 85% 45%;
+    --radius: 0.5rem;
+  }
 }
 
 @layer base {
@@ -38,5 +231,6 @@
       sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 }

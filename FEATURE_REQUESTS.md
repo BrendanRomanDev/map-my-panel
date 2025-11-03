@@ -67,6 +67,78 @@ Add a "self-labeling" or "label-only" mode for breakers where:
 
 ---
 
+## 3. Circuit Flow Mapping (Entity Flow Diagram)
+
+**Priority**: Low
+**Status**: Planned for Future
+
+### Problem
+Users want to visualize the order and flow of entities on a circuit/breaker. Currently, entities are listed but there's no visual representation of how they're connected or ordered.
+
+### Proposed Solution
+Create a new "Circuit Map" tab with drag-and-drop functionality:
+- **Breaker Selector**: Choose which breaker to map
+- **Entity Sidebar**: List of entities assigned to the selected breaker
+- **Canvas**: Drag entities from sidebar onto a canvas
+- **Connections**: Draw lines/arrows between entities to show flow order
+- **Persistence**: Save node positions and connections to database
+
+### User Experience
+1. Select a breaker from dropdown
+2. See all entities on that breaker in sidebar
+3. Drag entities onto canvas
+4. Connect entities to show order (e.g., Outlet 1 → Outlet 2 → Outlet 3)
+5. Auto-save positions and connections
+
+### Technical Implementation
+- Use React Flow library for node-based diagram
+- New database table: `circuit_maps` (panel_id, breaker_id, nodes JSON, edges JSON)
+- Export as PNG/SVG for printing
+
+### Benefits
+- Understand circuit topology
+- Document daisy-chaining
+- Troubleshoot electrical issues
+- Reference during electrical work
+
+---
+
+## 4. Floor Plan Drawing Tool
+
+**Priority**: Low
+**Status**: Planned for Future (Long-term)
+
+### Problem
+Users want to see a bird's-eye view of their property with entity locations marked on a floor plan.
+
+### Proposed Solution Option A: Drawing Tool
+Build a drawing interface where users can:
+- Draw rooms as rectangles/polygons
+- Label rooms (auto-associate with existing room data)
+- Place entity icons on walls/locations
+- Link icons to existing entities in database
+
+### Proposed Solution Option B: Image Upload + Pinning (Simpler)
+- Users upload their own floor plan image/photo
+- Pin entity icons onto the image at specific locations
+- Link pins to existing entities
+- Much simpler implementation than full drawing tool
+
+### Proposed Solution Option C: Grid-Based Layout
+- Simple grid representing the property
+- Click cells to add rooms and entities
+- Less flexible but easier to build
+
+### Technical Considerations
+- **Option A (Drawing)**: Complex - requires canvas manipulation, shape tools, layers
+- **Option B (Image Upload)**: Medium complexity - image handling, pin placement
+- **Option C (Grid)**: Simple - just a grid layout with clickable cells
+
+### Recommendation
+If pursued, start with **Option B (Image Upload + Pinning)** for fastest time-to-value.
+
+---
+
 ## Future Considerations
 
 - **Bulk Operations**: Add/edit/remove multiple entities at once
@@ -77,4 +149,4 @@ Add a "self-labeling" or "label-only" mode for breakers where:
 
 ---
 
-**Last Updated**: 2025-10-29
+**Last Updated**: 2025-11-03 (Added themes and mapping features)
