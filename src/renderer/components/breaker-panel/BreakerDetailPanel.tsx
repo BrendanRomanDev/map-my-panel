@@ -126,9 +126,9 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         const entity = allEntities?.find(e => e.id === entityId)
         if (entity) {
           let newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
-          // If this is a double-pole breaker with a linked partner, also remove that
-          if (breaker.linked_breaker_id) {
-            newBreakerIds = newBreakerIds.filter(id => id !== breaker.linked_breaker_id)
+          // If this is a double-pole breaker with a linked partner, also remove that (use current state, not original)
+          if (linkedBreakerId) {
+            newBreakerIds = newBreakerIds.filter(id => id !== linkedBreakerId)
           }
           await window.electronAPI.entities.update(entityId, { breaker_ids: newBreakerIds })
         }
@@ -139,9 +139,9 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         const entity = allEntities?.find(e => e.id === entityId)
         if (entity) {
           const newBreakerIds = [...entity.breaker_ids, breaker.id]
-          // If this is a double-pole breaker with a linked partner, also add that
-          if (breaker.linked_breaker_id && !newBreakerIds.includes(breaker.linked_breaker_id)) {
-            newBreakerIds.push(breaker.linked_breaker_id)
+          // If this is a double-pole breaker with a linked partner, also add that (use current state, not original)
+          if (linkedBreakerId && !newBreakerIds.includes(linkedBreakerId)) {
+            newBreakerIds.push(linkedBreakerId)
           }
           await window.electronAPI.entities.update(entityId, { breaker_ids: newBreakerIds })
         }
@@ -283,10 +283,10 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
       if (entities && entities.length > 0) {
         for (const entity of entities) {
           let newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
-          // If this is a double-pole breaker with a linked partner, also remove that
+          // If this is a double-pole breaker with a linked partner, also remove that (use current state, not original)
           // (since deleting one pole of a 240V circuit makes the circuit unusable)
-          if (breaker.linked_breaker_id) {
-            newBreakerIds = newBreakerIds.filter(id => id !== breaker.linked_breaker_id)
+          if (linkedBreakerId) {
+            newBreakerIds = newBreakerIds.filter(id => id !== linkedBreakerId)
           }
           await window.electronAPI.entities.update(entity.id, { breaker_ids: newBreakerIds })
         }
