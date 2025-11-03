@@ -17,9 +17,14 @@ export function BreakerCard({ breaker, allBreakers, onClick, onPowerToggle }: Br
     ? allBreakers.find(b => b.id === breaker.linked_breaker_id)
     : null
 
+  // Check if this is a tandem base position (no slot, but other breakers with same position have slots)
+  const isTandemBase = !breaker.position_slot && allBreakers
+    ? allBreakers.some(b => b.position === breaker.position && b.position_slot)
+    : false
+
   const handlePowerToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (onPowerToggle && !isSpare) {
+    if (onPowerToggle && !isSpare && !isTandemBase) {
       onPowerToggle(breaker.id, !breaker.is_powered)
     }
   }
@@ -28,7 +33,7 @@ export function BreakerCard({ breaker, allBreakers, onClick, onPowerToggle }: Br
     <button
       onClick={onClick}
       className={`w-full p-3 border rounded transition-colors text-left ${
-        isSpare
+        isSpare || isTandemBase
           ? 'border-muted bg-muted/30 hover:bg-muted/50'
           : isPoweredOff
           ? 'border-orange-500/50 bg-orange-50/50 hover:bg-orange-100/50 dark:bg-orange-950/30 dark:hover:bg-orange-950/50'
@@ -50,7 +55,7 @@ export function BreakerCard({ breaker, allBreakers, onClick, onPowerToggle }: Br
             {breaker.label && (
               <span className="text-sm truncate">{breaker.label}</span>
             )}
-            {isPoweredOff && !isSpare && (
+            {isPoweredOff && !isSpare && !isTandemBase && (
               <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300">
                 OFF
               </span>
@@ -84,8 +89,8 @@ export function BreakerCard({ breaker, allBreakers, onClick, onPowerToggle }: Br
 
         {/* Power toggle and status indicator */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Power toggle switch (only for active breakers) */}
-          {!isSpare && (
+          {/* Power toggle switch (only for actual breakers, not spare or tandem base positions) */}
+          {!isSpare && !isTandemBase && (
             <button
               onClick={handlePowerToggle}
               className={`relative w-10 h-5 rounded-full transition-colors ${
@@ -102,7 +107,7 @@ export function BreakerCard({ breaker, allBreakers, onClick, onPowerToggle }: Br
           )}
 
           {/* Status indicator */}
-          {isSpare ? (
+          {isSpare || isTandemBase ? (
             <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
           ) : isPoweredOff ? (
             <div className="w-2 h-2 rounded-full bg-orange-500" />
