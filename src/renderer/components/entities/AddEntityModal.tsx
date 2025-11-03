@@ -11,10 +11,11 @@ interface AddEntityModalProps {
   isOpen: boolean
   onClose: () => void
   initialBreakerIds?: string[]
+  createAsUnmapped?: boolean
   onEntityCreated?: () => void
 }
 
-export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, onEntityCreated }: AddEntityModalProps) {
+export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, createAsUnmapped, onEntityCreated }: AddEntityModalProps) {
   const queryClient = useQueryClient()
   const { data: breakers } = useBreakers(panelId)
 
@@ -41,7 +42,7 @@ export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, on
     try {
       const input: CreateEntityInput = {
         panel_id: panelId,
-        breaker_ids: breakerIds,
+        breaker_ids: createAsUnmapped ? [] : breakerIds,
         entity_type: entityType,
         name: name.trim(),
         room: room.trim() || null,
@@ -56,12 +57,13 @@ export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, on
       // If these fail, we still want to close the modal since the entity was created
       try {
         // Invalidate all relevant queries
+        const actualBreakerIds = createAsUnmapped ? [] : breakerIds
         const queriesToInvalidate = [
           queryKeys.entities.byPanel(panelId),
           queryKeys.entities.byRoom(panelId),
           queryKeys.entities.unmapped(panelId),
           queryKeys.breakers.byPanel(panelId),
-          ...breakerIds.map(breakerId => queryKeys.entities.byBreaker(breakerId))
+          ...actualBreakerIds.map(breakerId => queryKeys.entities.byBreaker(breakerId))
         ]
 
         await Promise.all(

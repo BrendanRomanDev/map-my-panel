@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useUnmappedEntities } from '../../hooks/useEntities'
+import { useBreakers } from '../../hooks/useBreakers'
 import { AddEntityModal } from '../entities/AddEntityModal'
 
 interface AssignEntitiesModalProps {
@@ -12,9 +13,22 @@ interface AssignEntitiesModalProps {
 
 export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAssign }: AssignEntitiesModalProps) {
   const { data: unmappedEntities } = useUnmappedEntities(panelId)
+  const { data: breakers } = useBreakers(panelId)
 
   const [selectedEntityIds, setSelectedEntityIds] = useState<Set<string>>(new Set())
   const [showAddEntityModal, setShowAddEntityModal] = useState(false)
+
+  // Calculate initial breaker IDs for visual hint (include linked partner for double-pole)
+  const initialBreakerIds = useMemo(() => {
+    const currentBreaker = breakers?.find(b => b.id === breakerId)
+    if (!currentBreaker) return [breakerId]
+
+    const ids = [breakerId]
+    if (currentBreaker.linked_breaker_id) {
+      ids.push(currentBreaker.linked_breaker_id)
+    }
+    return ids
+  }, [breakers, breakerId])
 
   if (!isOpen) return null
 
@@ -132,11 +146,13 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAss
         </div>
       </div>
 
-      {/* Add Entity Modal - create as unmapped, user will assign via "Assign" button */}
+      {/* Add Entity Modal - breakers pre-checked for convenience, but entity created as unmapped */}
       <AddEntityModal
         panelId={panelId}
         isOpen={showAddEntityModal}
         onClose={() => setShowAddEntityModal(false)}
+        initialBreakerIds={initialBreakerIds}
+        createAsUnmapped={true}
         onEntityCreated={handleEntityCreated}
       />
     </>
