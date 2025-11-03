@@ -55,10 +55,11 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAss
     onClose()
   }
 
-  const handleEntityCreated = () => {
+  const handleEntityCreated = (entityId: string) => {
     // Close the add entity modal - entity will appear in unmapped list
     setShowAddEntityModal(false)
-    // Stay in this modal so user can select and assign the new entity
+    // Auto-select the newly created entity
+    setSelectedEntityIds(new Set([entityId]))
   }
 
   return (

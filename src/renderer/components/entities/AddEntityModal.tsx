@@ -12,7 +12,7 @@ interface AddEntityModalProps {
   onClose: () => void
   initialBreakerIds?: string[]
   createAsUnmapped?: boolean
-  onEntityCreated?: () => void
+  onEntityCreated?: (entityId: string) => void
 }
 
 export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, createAsUnmapped, onEntityCreated }: AddEntityModalProps) {
@@ -51,7 +51,7 @@ export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, cr
       }
 
       // Create the entity - this is the critical operation
-      await window.electronAPI.entities.create(input)
+      const createdEntity = await window.electronAPI.entities.create(input)
 
       // Entity created successfully - now do best-effort post-creation operations
       // If these fail, we still want to close the modal since the entity was created
@@ -77,7 +77,7 @@ export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, cr
       }
 
       // Notify parent that entity was created
-      onEntityCreated?.()
+      onEntityCreated?.(createdEntity.id)
 
       // Reset form and close - entity was created successfully
       setEntityType('outlet')
