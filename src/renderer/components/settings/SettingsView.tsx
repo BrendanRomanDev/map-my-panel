@@ -76,6 +76,10 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
   const [deletePanelConfirmText, setDeletePanelConfirmText] = useState('')
   const [isDeletingPanel, setIsDeletingPanel] = useState(false)
 
+  // Main breaker amperage edit state
+  const [editingMainBreakerAmperage, setEditingMainBreakerAmperage] = useState(false)
+  const [mainBreakerAmperageValue, setMainBreakerAmperageValue] = useState(panel.main_breaker_amperage)
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'properties' | 'panel'>('properties')
 
@@ -614,6 +618,25 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
     }
   }
 
+  const handleUpdateMainBreakerAmperage = async () => {
+    if (mainBreakerAmperageValue === panel.main_breaker_amperage) {
+      setEditingMainBreakerAmperage(false)
+      return
+    }
+
+    try {
+      await window.electronAPI.panels.update(panel.id, {
+        main_breaker_amperage: mainBreakerAmperageValue
+      })
+      setEditingMainBreakerAmperage(false)
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['panels'] })
+    } catch (error) {
+      console.error('Failed to update main breaker amperage:', error)
+      alert('Failed to update main breaker amperage')
+    }
+  }
+
   const handleOpenEditLayout = () => {
     setEditLayoutPositions(panel.total_positions)
     setShowEditPanelLayoutModal(true)
@@ -935,7 +958,58 @@ export function SettingsView({ property, panel, onReset, onPropertyChange }: Set
             </div>
             <div>
               <div className="text-muted-foreground mb-1">Main Breaker</div>
-              <div className="text-lg font-semibold">{panel.main_breaker_amperage}A</div>
+              {editingMainBreakerAmperage ? (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={mainBreakerAmperageValue}
+                    onChange={(e) => setMainBreakerAmperageValue(Number(e.target.value))}
+                    className="px-2 py-1 border border-input rounded bg-background text-sm"
+                    autoFocus
+                  >
+                    <option value={100}>100A</option>
+                    <option value={125}>125A</option>
+                    <option value={150}>150A</option>
+                    <option value={200}>200A</option>
+                    <option value={225}>225A</option>
+                    <option value={300}>300A</option>
+                    <option value={400}>400A</option>
+                  </select>
+                  <button
+                    onClick={handleUpdateMainBreakerAmperage}
+                    className="p-1 text-primary hover:text-primary/80"
+                    title="Save"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setEditingMainBreakerAmperage(false)
+                      setMainBreakerAmperageValue(panel.main_breaker_amperage)
+                    }}
+                    className="p-1 text-muted-foreground hover:text-foreground"
+                    title="Cancel"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="text-lg font-semibold">{panel.main_breaker_amperage}A</div>
+                  <button
+                    onClick={() => setEditingMainBreakerAmperage(true)}
+                    className="p-1 text-muted-foreground hover:text-foreground"
+                    title="Edit main breaker amperage"
+                  >
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           <button

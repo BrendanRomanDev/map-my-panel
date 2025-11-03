@@ -83,6 +83,13 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
   const totalAmperage = breakers
     .filter(b => b.status === 'active' && b.is_powered)
     .reduce((sum, b) => sum + b.amperage, 0)
+
+  // Calculate sum of ALL breakers (to compare with main breaker rating)
+  const sumOfAllBreakers = breakers.reduce((sum, b) => sum + b.amperage, 0)
+
+  // Check if there's a mismatch between sum and main breaker
+  const hasMismatch = sumOfAllBreakers !== panel.main_breaker_amperage
+
   const usagePercent = Math.round((totalAmperage / panel.main_breaker_amperage) * 100)
 
   return (
@@ -97,9 +104,39 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold">
-            {totalAmperage}A / {panel.main_breaker_amperage}A
+            {totalAmperage}A used
           </div>
-          <div className="text-sm text-muted-foreground">{usagePercent}% capacity</div>
+          <div className="text-sm text-muted-foreground flex items-center justify-end gap-1">
+            <span>
+              {totalAmperage}A / {sumOfAllBreakers}A of {panel.main_breaker_amperage}A capacity
+            </span>
+            {hasMismatch && (
+              <span
+                className="inline-flex items-center text-yellow-600 dark:text-yellow-500 cursor-help"
+                title={`Your breakers add up to ${sumOfAllBreakers}A but your main breaker is rated ${panel.main_breaker_amperage}A. ${
+                  sumOfAllBreakers > panel.main_breaker_amperage
+                    ? 'This exceeds your panel capacity! Update individual breakers or adjust your main breaker rating.'
+                    : 'Update individual breakers or adjust your main breaker rating in settings.'
+                }`}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="16" x2="12" y2="12" />
+                  <line x1="12" y1="8" x2="12.01" y2="8" />
+                </svg>
+              </span>
+            )}
+          </div>
           {/* Capacity bar */}
           <div className="mt-2 w-48 h-2 bg-muted rounded-full overflow-hidden">
             <div
