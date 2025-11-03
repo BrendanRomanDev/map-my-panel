@@ -109,9 +109,9 @@ export function Step4ReadyToMap({ data, onComplete, onBack }: Step4ReadyToMapPro
           <div className="text-sm text-muted-foreground">
             {data.entities.length > 0 ? (
               <>
-                {data.entities.length} entity(ies) added
+                {data.entities.length} {data.entities.length === 1 ? 'entity' : 'entities'} added
                 <div className="mt-2 text-xs">
-                  {data.entities.length} unmapped entity(ies) ready to assign
+                  {data.entities.length} unmapped {data.entities.length === 1 ? 'entity' : 'entities'} ready to assign
                 </div>
               </>
             ) : (

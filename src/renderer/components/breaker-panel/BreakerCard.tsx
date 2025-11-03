@@ -78,7 +78,7 @@ export function BreakerCard({ breaker, allBreakers, onClick, onPowerToggle }: Br
           <div className="text-xs text-muted-foreground mt-0.5">
             {breaker.amperage}A •{' '}
             {breaker.breaker_type === 'single-pole' ? 'SP' : 'DP'}
-            {hasEntities && ` • ${breaker.entity_count} entity(ies)`}
+            {hasEntities && ` • ${breaker.entity_count} ${breaker.entity_count === 1 ? 'entity' : 'entities'}`}
           </div>
         </div>
 

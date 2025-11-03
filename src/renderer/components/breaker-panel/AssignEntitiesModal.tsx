@@ -91,7 +91,7 @@ export function AssignEntitiesModal({ breakerId, panelId, isOpen, onClose, onAss
         <div className="p-6 border-t border-border flex justify-between items-center">
           <div className="text-sm text-muted-foreground">
             {selectedEntityIds.size > 0 && (
-              <span>{selectedEntityIds.size} entity(ies) selected</span>
+              <span>{selectedEntityIds.size} {selectedEntityIds.size === 1 ? 'entity' : 'entities'} selected</span>
             )}
           </div>
           <div className="flex gap-2">
