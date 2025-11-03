@@ -94,6 +94,16 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         linked_breaker_id: linkedBreakerId
       })
 
+      // Sync properties to linked breaker (for double-pole breakers)
+      // Status, power state, and amperage must match between linked breakers
+      if (linkedBreakerId && breakerType === 'double-pole') {
+        await window.electronAPI.breakers.update(linkedBreakerId, {
+          amperage,
+          status,
+          is_powered: isPowered
+        })
+      }
+
       // If changing from double-pole to single-pole, unassign all entities from this breaker
       if (originalValues.breakerType === 'double-pole' && breakerType === 'single-pole') {
         // Get all entities currently assigned to this breaker
@@ -158,14 +168,6 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
           }
           await window.electronAPI.entities.update(entityId, { breaker_ids: newBreakerIds })
         }
-      }
-
-      // If we assigned any entities and there's a linked breaker, ensure it's also active and powered on
-      if (toAssign.length > 0 && linkedBreakerId) {
-        await window.electronAPI.breakers.update(linkedBreakerId, {
-          status: 'active',
-          is_powered: true
-        })
       }
 
       // Invalidate queries to refresh data for both this breaker and linked breaker
@@ -274,9 +276,13 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
 
     try {
       // Convert the breaker to double-pole and link it back to the current breaker
+      // Also sync properties (amperage, status, power state) to match current breaker
       await window.electronAPI.breakers.update(breakerToConvert, {
         breaker_type: 'double-pole',
-        linked_breaker_id: breaker.id
+        linked_breaker_id: breaker.id,
+        amperage,
+        status,
+        is_powered: isPowered
       })
 
       // Update the current breaker to link to the converted breaker
