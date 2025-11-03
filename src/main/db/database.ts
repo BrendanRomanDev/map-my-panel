@@ -293,4 +293,57 @@ function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('005_add_properties')
     console.log('Migration 005_add_properties completed')
   }
+
+  // Migration 006: Support multiple breakers per entity (for double-pole breakers)
+  if (!appliedMigrations.includes('006_multiple_breakers_per_entity')) {
+    console.log('Running migration: 006_multiple_breakers_per_entity')
+
+    database.exec(`
+      -- Create new entities table with breaker_ids as JSON array
+      CREATE TABLE entities_new (
+        id TEXT PRIMARY KEY,
+        panel_id TEXT NOT NULL,
+        breaker_ids TEXT DEFAULT '[]',  -- JSON array of breaker IDs
+        entity_type TEXT NOT NULL,
+        name TEXT NOT NULL,
+        room TEXT,
+        location TEXT,
+        metadata TEXT DEFAULT '{}',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (panel_id) REFERENCES panels(id) ON DELETE CASCADE
+      );
+
+      -- Migrate existing data: convert single breaker_id to breaker_ids array
+      INSERT INTO entities_new (id, panel_id, breaker_ids, entity_type, name, room, location, metadata, created_at, updated_at)
+      SELECT
+        id,
+        panel_id,
+        CASE
+          WHEN breaker_id IS NULL THEN '[]'
+          ELSE json_array(breaker_id)
+        END,
+        entity_type,
+        name,
+        room,
+        location,
+        metadata,
+        created_at,
+        updated_at
+      FROM entities;
+
+      -- Drop old table and rename new one
+      DROP TABLE entities;
+      ALTER TABLE entities_new RENAME TO entities;
+
+      -- Recreate indexes
+      CREATE INDEX idx_entities_panel_id ON entities(panel_id);
+      CREATE INDEX idx_entities_room ON entities(room);
+      CREATE INDEX idx_entities_name ON entities(name COLLATE NOCASE);
+      CREATE INDEX idx_entities_unmapped ON entities(panel_id, breaker_ids) WHERE breaker_ids = '[]';
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('006_multiple_breakers_per_entity')
+    console.log('Migration 006_multiple_breakers_per_entity completed')
+  }
 }
