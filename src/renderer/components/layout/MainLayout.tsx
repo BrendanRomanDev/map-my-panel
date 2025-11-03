@@ -12,17 +12,39 @@ import { PanelSelectorModal } from '../property/PanelSelectorModal'
 import { useEntities } from '../../hooks/useEntities'
 
 interface MainLayoutProps {
-  property: Property
-  panel: Panel
-  onPropertyChange: (property: Property) => void
-  onPanelChange: (panel: Panel) => void
+  propertyId: string
+  panelId: string
+  onPropertyChange: (propertyId: string) => void
+  onPanelChange: (panelId: string) => void
   onPanelReset: () => void
 }
 
 type GroupingType = 'room' | 'breaker'
 
-export function MainLayout({ property, panel, onPropertyChange, onPanelChange, onPanelReset }: MainLayoutProps) {
+export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChange, onPanelReset }: MainLayoutProps) {
   const queryClient = useQueryClient()
+
+  // Query for property and panel data using IDs
+  const { data: property } = useQuery({
+    queryKey: ['property', propertyId],
+    queryFn: () => window.electronAPI.properties.findById(propertyId),
+    enabled: !!propertyId
+  })
+
+  const { data: panel } = useQuery({
+    queryKey: ['panel', panelId],
+    queryFn: () => window.electronAPI.panels.findById(panelId),
+    enabled: !!panelId
+  })
+
+  // Early return if data is loading
+  if (!property || !panel) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
   const [grouping, setGrouping] = useState<GroupingType>('room')
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all')
   const [roomFilter, setRoomFilter] = useState<string>('all')
@@ -45,40 +67,34 @@ export function MainLayout({ property, panel, onPropertyChange, onPanelChange, o
   })
 
   const handlePropertySelect = async (propertyId: string) => {
-    const selectedProperty = allProperties?.find(p => p.id === propertyId)
-    if (selectedProperty) {
-      await window.electronAPI.properties.setAsCurrent(propertyId)
+    await window.electronAPI.properties.setAsCurrent(propertyId)
 
-      // Get all panels for this property
-      const panels = await window.electronAPI.panels.findByProperty(propertyId)
+    // Get all panels for this property
+    const panels = await window.electronAPI.panels.findByProperty(propertyId)
 
-      // Always update property
-      onPropertyChange(selectedProperty)
+    // Always update property
+    onPropertyChange(propertyId)
 
-      if (panels && panels.length > 0) {
-        // Switch to first panel of the new property
-        const firstPanel = panels[0]
-        onPanelChange(firstPanel)
+    if (panels && panels.length > 0) {
+      // Switch to first panel of the new property
+      const firstPanel = panels[0]
+      onPanelChange(firstPanel.id)
 
-        // Invalidate all queries related to panels, breakers, and entities
-        queryClient.invalidateQueries({ queryKey: ['panels'] })
-        queryClient.invalidateQueries({ queryKey: ['breakers'] })
-        queryClient.invalidateQueries({ queryKey: ['entities'] })
-      }
-      // If no panels, don't call onPanelChange - the UI will handle the "no panels" state
+      // Invalidate all queries related to panels, breakers, and entities
+      queryClient.invalidateQueries({ queryKey: ['panels'] })
+      queryClient.invalidateQueries({ queryKey: ['breakers'] })
+      queryClient.invalidateQueries({ queryKey: ['entities'] })
     }
+    // If no panels, don't call onPanelChange - the UI will handle the "no panels" state
   }
 
   const handlePanelSelect = (panelId: string) => {
-    const selectedPanel = propertyPanels?.find(p => p.id === panelId)
-    if (selectedPanel) {
-      onPanelChange(selectedPanel)
+    onPanelChange(panelId)
 
-      // Invalidate queries for breakers and entities when switching panels
-      queryClient.invalidateQueries({ queryKey: ['breakers', 'byPanel', panelId] })
-      queryClient.invalidateQueries({ queryKey: ['entities', 'byPanel', panelId] })
-      queryClient.invalidateQueries({ queryKey: ['entities', 'byRoom', panelId] })
-    }
+    // Invalidate queries for breakers and entities when switching panels
+    queryClient.invalidateQueries({ queryKey: ['breakers', 'byPanel', panelId] })
+    queryClient.invalidateQueries({ queryKey: ['entities', 'byPanel', panelId] })
+    queryClient.invalidateQueries({ queryKey: ['entities', 'byRoom', panelId] })
   }
 
   const handlePanelAdded = async () => {
@@ -87,13 +103,13 @@ export function MainLayout({ property, panel, onPropertyChange, onPanelChange, o
     const panels = await window.electronAPI.panels.findByProperty(property.id)
     if (panels && panels.length > 0) {
       const newPanel = panels[panels.length - 1]
-      onPanelChange(newPanel)
+      onPanelChange(newPanel.id)
     }
   }
 
-  const handlePropertyChangeFromSettings = (newProperty: Property, newPanel: Panel) => {
-    onPropertyChange(newProperty)
-    onPanelChange(newPanel)
+  const handlePropertyChangeFromSettings = (newPropertyId: string, newPanelId: string) => {
+    onPropertyChange(newPropertyId)
+    onPanelChange(newPanelId)
   }
 
   const groupingOptions = [
@@ -214,8 +230,8 @@ export function MainLayout({ property, panel, onPropertyChange, onPanelChange, o
           <div className="flex-1 p-6 overflow-auto">
             <div className="max-w-2xl mx-auto">
               <SettingsView
-                property={property}
-                panel={panel}
+                propertyId={property.id}
+                panelId={panel.id}
                 onReset={onPanelReset}
                 onPropertyChange={handlePropertyChangeFromSettings}
               />
@@ -292,7 +308,7 @@ export function MainLayout({ property, panel, onPropertyChange, onPanelChange, o
 
             {/* Main panel view */}
             <main className="flex-1 p-6 overflow-auto">
-              <BreakerPanelGrid panel={panel} />
+              <BreakerPanelGrid panelId={panel.id} />
             </main>
           </>
         ) : (

@@ -1,18 +1,35 @@
 import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useBreakers } from '../../hooks/useBreakers'
 import { BreakerCard } from './BreakerCard'
 import { BreakerDetailPanel } from './BreakerDetailPanel'
 import type { Panel, BreakerWithEntityCount } from '@shared/types'
 
 interface BreakerPanelGridProps {
-  panel: Panel
+  panelId: string
 }
 
-export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
+export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
   const queryClient = useQueryClient()
-  const { data: breakers, isLoading, error } = useBreakers(panel.id)
+
+  // Query for panel data
+  const { data: panel } = useQuery({
+    queryKey: ['panel', panelId],
+    queryFn: () => window.electronAPI.panels.findById(panelId),
+    enabled: !!panelId
+  })
+
+  const { data: breakers, isLoading, error } = useBreakers(panelId)
   const [selectedBreaker, setSelectedBreaker] = useState<BreakerWithEntityCount | null>(null)
+
+  // Early return if panel is loading
+  if (!panel) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="text-muted-foreground">Loading panel...</div>
+      </div>
+    )
+  }
 
   const handlePowerToggle = async (breakerId: string, isPowered: boolean) => {
     try {
@@ -32,7 +49,7 @@ export function BreakerPanelGrid({ panel }: BreakerPanelGridProps) {
       }
 
       // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ['breakers', panel.id] })
+      queryClient.invalidateQueries({ queryKey: ['breakers', panelId] })
     } catch (error) {
       console.error('Failed to toggle breaker power:', error)
     }

@@ -5,8 +5,8 @@ import { MainLayout } from './components/layout/MainLayout'
 import type { Property, Panel } from '@shared/types'
 
 export function App() {
-  const [currentProperty, setCurrentProperty] = useState<Property | null>(null)
-  const [currentPanel, setCurrentPanel] = useState<Panel | null>(null)
+  const [currentPropertyId, setCurrentPropertyId] = useState<string | null>(null)
+  const [currentPanelId, setCurrentPanelId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Query to check if a property exists
@@ -31,16 +31,16 @@ export function App() {
 
   useEffect(() => {
     if (existingProperty) {
-      setCurrentProperty(existingProperty)
+      setCurrentPropertyId(existingProperty.id)
     }
     if (existingPanel) {
-      setCurrentPanel(existingPanel)
+      setCurrentPanelId(existingPanel.id)
     }
   }, [existingProperty, existingPanel])
 
   const handlePanelReset = async () => {
     // Clear current panel
-    setCurrentPanel(null)
+    setCurrentPanelId(null)
 
     // Re-fetch to check if any panels remain in the property
     queryClient.invalidateQueries({ queryKey: ['panel', 'current'] })
@@ -52,23 +52,23 @@ export function App() {
     })
 
     // Update state based on what we found
-    setCurrentPanel(updatedPanel)
+    setCurrentPanelId(updatedPanel?.id || null)
   }
 
-  const handlePropertyChange = async (property: Property) => {
-    setCurrentProperty(property)
+  const handlePropertyChange = async (propertyId: string) => {
+    setCurrentPropertyId(propertyId)
     // Switch to this property's first panel
-    await window.electronAPI.properties.setAsCurrent(property.id)
+    await window.electronAPI.properties.setAsCurrent(propertyId)
 
     // Refetch panel
     const panel = await window.electronAPI.panels.getCurrentOrNull()
-    setCurrentPanel(panel)
+    setCurrentPanelId(panel?.id || null)
 
     queryClient.invalidateQueries()
   }
 
-  const handlePanelChange = (panel: Panel) => {
-    setCurrentPanel(panel)
+  const handlePanelChange = (panelId: string) => {
+    setCurrentPanelId(panelId)
   }
 
   // Check for errors
@@ -97,12 +97,12 @@ export function App() {
   }
 
   // Show onboarding if no property or panel exists
-  if (!currentProperty || !currentPanel) {
+  if (!currentPropertyId || !currentPanelId) {
     return (
       <OnboardingWizard
         onComplete={(property, panel) => {
-          setCurrentProperty(property)
-          setCurrentPanel(panel)
+          setCurrentPropertyId(property.id)
+          setCurrentPanelId(panel.id)
           queryClient.invalidateQueries()
         }}
       />
@@ -112,8 +112,8 @@ export function App() {
   // Show main application
   return (
     <MainLayout
-      property={currentProperty}
-      panel={currentPanel}
+      propertyId={currentPropertyId}
+      panelId={currentPanelId}
       onPropertyChange={handlePropertyChange}
       onPanelChange={handlePanelChange}
       onPanelReset={handlePanelReset}
