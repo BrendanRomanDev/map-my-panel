@@ -219,13 +219,10 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
                 </svg>
 
                 {breaker.label ? (
-                  <span>{breaker.position} | {breaker.label}</span>
+                  <span>{breaker.position} | {breaker.label} ({entities.length})</span>
                 ) : (
-                  <span>Position {breaker.position}</span>
+                  <span>Position {breaker.position} ({entities.length})</span>
                 )}
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  • {entities.length} {entities.length === 1 ? 'entity' : 'entities'}
-                </span>
               </button>
 
               {!isCollapsed && (
