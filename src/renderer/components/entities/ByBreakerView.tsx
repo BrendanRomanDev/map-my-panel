@@ -218,11 +218,11 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
 
-                <span className="text-muted-foreground">Position {breaker.position}</span>
-                {breaker.label && <span className="ml-2">{breaker.label}</span>}
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
-                  ({breaker.amperage}A, {breaker.breaker_type === 'single-pole' ? 'Single' : 'Double'})
-                </span>
+                {breaker.label ? (
+                  <span>{breaker.position} | {breaker.label}</span>
+                ) : (
+                  <span>Position {breaker.position}</span>
+                )}
                 <span className="ml-2 text-xs font-normal text-muted-foreground">
                   • {entities.length} {entities.length === 1 ? 'entity' : 'entities'}
                 </span>
