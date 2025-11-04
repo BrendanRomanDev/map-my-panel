@@ -35,6 +35,8 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
   return (
     <button
       onClick={onClick}
+      onMouseEnter={() => onHover?.(breaker.id)}
+      onMouseLeave={() => onHover?.(null)}
       className={`w-full p-3 border-2 rounded transition-all text-left ${
         isHighlighted
           ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'

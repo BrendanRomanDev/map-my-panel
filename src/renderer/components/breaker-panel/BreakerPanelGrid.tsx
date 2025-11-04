@@ -303,7 +303,12 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                             {/* Base position - always visible, acts as toggle */}
                             <button
                               onClick={() => toggleTandem(leftPosition)}
-                              onMouseEnter={() => setHoveredPosition(leftPosition)}
+                              onMouseEnter={() => {
+                                // Only set hovered position if collapsed (to highlight linked positions)
+                                if (!isExpanded) {
+                                  setHoveredPosition(leftPosition)
+                                }
+                              }}
                               onMouseLeave={() => setHoveredPosition(null)}
                               className={`w-full p-3 border-2 rounded transition-all text-left ${
                                 (!isExpanded && tandemBreakers.some(b => highlightedBreakerIds.has(b.id))) || isPositionHovered(leftPosition)
@@ -319,7 +324,21 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                       Tandem ({tandemBreakers.length})
                                     </span>
                                     {linkedRelationship && (
-                                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1">
+                                      <span
+                                        className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1 cursor-pointer hover:bg-accent/80 transition-colors"
+                                        onMouseEnter={(e) => {
+                                          e.stopPropagation()
+                                          // Find the first linked breaker and hover it (which will highlight both)
+                                          const linkedBreaker = tandemBreakers.find(b => b.linked_breaker_id)
+                                          if (linkedBreaker) {
+                                            setHoveredBreakerId(linkedBreaker.id)
+                                          }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.stopPropagation()
+                                          setHoveredBreakerId(null)
+                                        }}
+                                      >
                                         <svg
                                           xmlns="http://www.w3.org/2000/svg"
                                           width="10"
@@ -414,7 +433,12 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                             {/* Base position - always visible, acts as toggle */}
                             <button
                               onClick={() => toggleTandem(rightPosition)}
-                              onMouseEnter={() => setHoveredPosition(rightPosition)}
+                              onMouseEnter={() => {
+                                // Only set hovered position if collapsed (to highlight linked positions)
+                                if (!isExpanded) {
+                                  setHoveredPosition(rightPosition)
+                                }
+                              }}
                               onMouseLeave={() => setHoveredPosition(null)}
                               className={`w-full p-3 border-2 rounded transition-all text-left ${
                                 (!isExpanded && tandemBreakers.some(b => highlightedBreakerIds.has(b.id))) || isPositionHovered(rightPosition)
@@ -430,7 +454,21 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                       Tandem ({tandemBreakers.length})
                                     </span>
                                     {linkedRelationship && (
-                                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1">
+                                      <span
+                                        className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1 cursor-pointer hover:bg-accent/80 transition-colors"
+                                        onMouseEnter={(e) => {
+                                          e.stopPropagation()
+                                          // Find the first linked breaker and hover it (which will highlight both)
+                                          const linkedBreaker = tandemBreakers.find(b => b.linked_breaker_id)
+                                          if (linkedBreaker) {
+                                            setHoveredBreakerId(linkedBreaker.id)
+                                          }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          e.stopPropagation()
+                                          setHoveredBreakerId(null)
+                                        }}
+                                      >
                                         <svg
                                           xmlns="http://www.w3.org/2000/svg"
                                           width="10"
