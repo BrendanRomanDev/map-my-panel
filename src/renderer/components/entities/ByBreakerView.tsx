@@ -92,7 +92,19 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
   }
 
   // Group entities by breaker, including unmapped
+  // Filter out base positions for tandem breakers (they're just containers)
   const breakersWithEntities = breakers
+    .filter(breaker => {
+      // Skip base positions that have tandem breakers
+      if (!breaker.position_slot) {
+        // Check if there are other breakers at same position with slots
+        const hasTandemSlots = breakers.some(
+          b => b.position === breaker.position && b.position_slot
+        )
+        if (hasTandemSlots) return false
+      }
+      return true
+    })
     .map(breaker => ({
       breaker,
       entities: entities.filter(e => e.breaker_ids.includes(breaker.id))
@@ -217,9 +229,17 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
                 </svg>
 
                 {breaker.label ? (
-                  <span>{breaker.position} | {breaker.label} ({entities.length})</span>
+                  <span>
+                    {breaker.position}
+                    {breaker.position_slot && <span className="text-xs">{breaker.position_slot}</span>}
+                    {' | '}{breaker.label} ({entities.length})
+                  </span>
                 ) : (
-                  <span>Position {breaker.position} ({entities.length})</span>
+                  <span>
+                    Position {breaker.position}
+                    {breaker.position_slot && <span className="text-xs">{breaker.position_slot}</span>}
+                    {' '}({entities.length})
+                  </span>
                 )}
               </button>
 

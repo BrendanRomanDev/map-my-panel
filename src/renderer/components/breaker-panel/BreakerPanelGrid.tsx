@@ -246,7 +246,11 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                             {/* Base position - always visible, acts as toggle */}
                             <button
                               onClick={() => toggleTandem(leftPosition)}
-                              className="w-full p-3 border-2 border-accent/50 bg-accent/5 hover:bg-accent/10 rounded transition-all text-left"
+                              className={`w-full p-3 border-2 rounded transition-all text-left ${
+                                !isExpanded && tandemBreakers.some(b => highlightedBreakerIds.has(b.id))
+                                  ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl'
+                                  : 'border-accent/50 bg-accent/5 hover:bg-accent/10'
+                              }`}
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex-1">
@@ -355,7 +359,11 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                             {/* Base position - always visible, acts as toggle */}
                             <button
                               onClick={() => toggleTandem(rightPosition)}
-                              className="w-full p-3 border-2 border-accent/50 bg-accent/5 hover:bg-accent/10 rounded transition-all text-left"
+                              className={`w-full p-3 border-2 rounded transition-all text-left ${
+                                !isExpanded && tandemBreakers.some(b => highlightedBreakerIds.has(b.id))
+                                  ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl'
+                                  : 'border-accent/50 bg-accent/5 hover:bg-accent/10'
+                              }`}
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex-1">
