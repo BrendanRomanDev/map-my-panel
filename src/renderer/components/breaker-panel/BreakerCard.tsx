@@ -34,36 +34,34 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
   }
 
   return (
-    <button
-      onClick={onClick}
-      className={`w-full p-3 border-2 rounded transition-all text-left relative ${
-        isHighlighted
-          ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'
-          : isSpare || isTandemBase || isPoweredOff
-          ? 'border-muted/50 bg-muted/10 hover:bg-muted/20 opacity-60'
-          : hasEntities
-          ? 'border-primary/50 bg-primary/5 hover:bg-primary/10'
-          : 'border-yellow-500/40 bg-yellow-50/30 hover:bg-yellow-100/30 dark:bg-yellow-950/20 dark:hover:bg-yellow-950/30'
-      } ${breaker.position_slot ? 'border-l-4 border-l-accent' : ''}`}
-    >
+    <div className="relative group">
+      {showCollapse && onCollapse && (
+        <button
+          onClick={onCollapse}
+          className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 p-1 bg-background border-2 border-accent rounded-full hover:bg-accent/10 transition-colors shadow-sm"
+          title="Collapse tandem"
+        >
+          <svg className="w-3 h-3 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          </svg>
+        </button>
+      )}
+      <button
+        onClick={onClick}
+        className={`w-full p-3 border-2 rounded transition-all text-left ${
+          isHighlighted
+            ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'
+            : isSpare || isTandemBase || isPoweredOff
+            ? 'border-muted/50 bg-muted/10 hover:bg-muted/20 opacity-60'
+            : hasEntities
+            ? 'border-primary/50 bg-primary/5 hover:bg-primary/10'
+            : 'border-yellow-500/40 bg-yellow-50/30 hover:bg-yellow-100/30 dark:bg-yellow-950/20 dark:hover:bg-yellow-950/30'
+        } ${breaker.position_slot ? 'border-l-4 border-l-accent' : ''}`}
+      >
       <div className="flex items-center justify-between gap-2">
         {/* Position and label */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            {showCollapse && onCollapse && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onCollapse()
-                }}
-                className="p-0.5 hover:bg-muted rounded transition-colors"
-                title="Collapse tandem"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                </svg>
-              </button>
-            )}
             <span className="font-mono text-sm font-medium">
               {breaker.position}
               {breaker.position_slot && (
@@ -151,6 +149,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
           )}
         </div>
       </div>
-    </button>
+      </button>
+    </div>
   )
 }

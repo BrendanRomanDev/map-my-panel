@@ -239,19 +239,21 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                       }
 
                       // Expanded or regular breaker view
-                      return leftBreakers.map(breaker => (
-                        <BreakerCard
-                          key={breaker.id}
-                          breaker={breaker}
-                          allBreakers={breakers}
-                          rooms={breakerRooms.get(breaker.id)}
-                          isHighlighted={highlightedBreakerIds.has(breaker.id)}
-                          onClick={() => setSelectedBreaker(breaker)}
-                          onPowerToggle={handlePowerToggle}
-                          showCollapse={hasTandem && isExpanded}
-                          onCollapse={() => toggleTandem(leftPosition)}
-                        />
-                      ))
+                      return leftBreakers
+                        .filter(breaker => !hasTandem || breaker.position_slot) // Skip base position in tandems
+                        .map(breaker => (
+                          <BreakerCard
+                            key={breaker.id}
+                            breaker={breaker}
+                            allBreakers={breakers}
+                            rooms={breakerRooms.get(breaker.id)}
+                            isHighlighted={highlightedBreakerIds.has(breaker.id)}
+                            onClick={() => setSelectedBreaker(breaker)}
+                            onPowerToggle={handlePowerToggle}
+                            showCollapse={hasTandem && isExpanded}
+                            onCollapse={() => toggleTandem(leftPosition)}
+                          />
+                        ))
                     })()
                   ) : (
                     <div className="p-3 border border-dashed border-muted rounded text-center text-sm text-muted-foreground">
@@ -303,19 +305,21 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                       }
 
                       // Expanded or regular breaker view
-                      return rightBreakers.map(breaker => (
-                        <BreakerCard
-                          key={breaker.id}
-                          breaker={breaker}
-                          allBreakers={breakers}
-                          rooms={breakerRooms.get(breaker.id)}
-                          isHighlighted={highlightedBreakerIds.has(breaker.id)}
-                          onClick={() => setSelectedBreaker(breaker)}
-                          onPowerToggle={handlePowerToggle}
-                          showCollapse={hasTandem && isExpanded}
-                          onCollapse={() => toggleTandem(rightPosition)}
-                        />
-                      ))
+                      return rightBreakers
+                        .filter(breaker => !hasTandem || breaker.position_slot) // Skip base position in tandems
+                        .map(breaker => (
+                          <BreakerCard
+                            key={breaker.id}
+                            breaker={breaker}
+                            allBreakers={breakers}
+                            rooms={breakerRooms.get(breaker.id)}
+                            isHighlighted={highlightedBreakerIds.has(breaker.id)}
+                            onClick={() => setSelectedBreaker(breaker)}
+                            onPowerToggle={handlePowerToggle}
+                            showCollapse={hasTandem && isExpanded}
+                            onCollapse={() => toggleTandem(rightPosition)}
+                          />
+                        ))
                     })()
                   ) : (
                     <div className="p-3 border border-dashed border-muted rounded text-center text-sm text-muted-foreground">
