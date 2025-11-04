@@ -62,7 +62,7 @@ export function AddPropertyModal({ isOpen, onClose, onSuccess }: AddPropertyModa
               placeholder="e.g., My House, Rental Property, Beach House"
               autoFocus
               disabled={isCreating}
-              className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
             />
             <p className="text-xs text-muted-foreground mt-1">
               You can add panels to this property after creating it

@@ -133,7 +133,7 @@ export function AddPanelModal({ propertyId, isOpen, onClose, onSuccess, existing
                 placeholder="e.g., Main Panel, Garage Panel, Sub Panel"
                 autoFocus
                 disabled={isCreating}
-                className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
               />
             </div>
 
