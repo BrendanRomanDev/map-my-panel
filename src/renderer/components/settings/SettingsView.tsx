@@ -74,6 +74,12 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
   // Tab state
   const [activeTab, setActiveTab] = useState<'properties' | 'panel'>('properties')
 
+  // Display settings
+  const [showRoomsOnBreakers, setShowRoomsOnBreakers] = useState(() => {
+    const saved = localStorage.getItem('showRoomsOnBreakers')
+    return saved === 'true'
+  })
+
   // Query for property and panel data using IDs - React Query handles caching
   const { data: property } = useQuery({
     queryKey: ['property', propertyId],
@@ -826,6 +832,27 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
                   <p className="text-xs text-muted-foreground mt-2">
                     {availableThemes[theme]?.description || 'Theme description'}
                   </p>
+                </div>
+
+                <div className="border-t border-border pt-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showRoomsOnBreakers}
+                      onChange={(e) => {
+                        const newValue = e.target.checked
+                        setShowRoomsOnBreakers(newValue)
+                        localStorage.setItem('showRoomsOnBreakers', String(newValue))
+                      }}
+                      className="w-4 h-4 rounded border-border"
+                    />
+                    <div>
+                      <div className="text-sm font-medium">Show rooms on breaker cards</div>
+                      <div className="text-xs text-muted-foreground">
+                        Display which rooms are affected by each breaker on the panel grid
+                      </div>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>

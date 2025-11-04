@@ -3,11 +3,12 @@ import type { BreakerWithEntityCount } from '@shared/types'
 interface BreakerCardProps {
   breaker: BreakerWithEntityCount
   allBreakers?: BreakerWithEntityCount[]
+  rooms?: string[]
   onClick?: () => void
   onPowerToggle?: (breakerId: string, isPowered: boolean) => void
 }
 
-export function BreakerCard({ breaker, allBreakers, onClick, onPowerToggle }: BreakerCardProps) {
+export function BreakerCard({ breaker, allBreakers, rooms, onClick, onPowerToggle }: BreakerCardProps) {
   const isSpare = breaker.status === 'spare'
   const hasEntities = breaker.entity_count > 0
   const isPoweredOff = !breaker.is_powered
@@ -85,6 +86,18 @@ export function BreakerCard({ breaker, allBreakers, onClick, onPowerToggle }: Br
             {breaker.breaker_type === 'single-pole' ? 'SP' : 'DP'}
             {hasEntities && ` • ${breaker.entity_count} ${breaker.entity_count === 1 ? 'entity' : 'entities'}`}
           </div>
+          {rooms && rooms.length > 0 && (
+            <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
+              {rooms.map((room, index) => (
+                <span
+                  key={room}
+                  className="px-1.5 py-0.5 rounded bg-muted text-foreground/80"
+                >
+                  {room}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Power toggle and status indicator */}

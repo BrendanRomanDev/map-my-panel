@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useBreakers } from '../../hooks/useBreakers'
+import { useEntities } from '../../hooks/useEntities'
 import { BreakerCard } from './BreakerCard'
 import { BreakerDetailPanel } from './BreakerDetailPanel'
 import type { Panel, BreakerWithEntityCount } from '@shared/types'
@@ -20,7 +21,39 @@ export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
   })
 
   const { data: breakers, isLoading, error } = useBreakers(panelId)
+  const { data: entities } = useEntities(panelId)
   const [selectedBreaker, setSelectedBreaker] = useState<BreakerWithEntityCount | null>(null)
+
+  // Read the setting from localStorage
+  const showRoomsOnBreakers = localStorage.getItem('showRoomsOnBreakers') === 'true'
+
+  // Calculate rooms for each breaker
+  const breakerRooms = useMemo(() => {
+    if (!entities || !showRoomsOnBreakers) return new Map<string, string[]>()
+
+    const roomsMap = new Map<string, Set<string>>()
+
+    entities.forEach(entity => {
+      // Only include entities with rooms
+      if (!entity.room || entity.room.trim() === '') return
+
+      // Add room to each breaker this entity is assigned to
+      entity.breaker_ids.forEach(breakerId => {
+        if (!roomsMap.has(breakerId)) {
+          roomsMap.set(breakerId, new Set())
+        }
+        roomsMap.get(breakerId)!.add(entity.room)
+      })
+    })
+
+    // Convert sets to sorted arrays
+    const result = new Map<string, string[]>()
+    roomsMap.forEach((roomSet, breakerId) => {
+      result.set(breakerId, Array.from(roomSet).sort())
+    })
+
+    return result
+  }, [entities, showRoomsOnBreakers])
 
   // Early return if panel is loading
   if (!panel) {
@@ -152,6 +185,7 @@ export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
                         <BreakerCard
                           breaker={breaker}
                           allBreakers={breakers}
+                          rooms={breakerRooms.get(breaker.id)}
                           onClick={() => setSelectedBreaker(breaker)}
                           onPowerToggle={handlePowerToggle}
                         />
@@ -175,6 +209,7 @@ export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
                         <BreakerCard
                           breaker={breaker}
                           allBreakers={breakers}
+                          rooms={breakerRooms.get(breaker.id)}
                           onClick={() => setSelectedBreaker(breaker)}
                           onPowerToggle={handlePowerToggle}
                         />
