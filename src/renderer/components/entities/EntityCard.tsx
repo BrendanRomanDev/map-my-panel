@@ -4,20 +4,34 @@ interface EntityCardProps {
   entity: Entity
   onClick?: () => void
   onEdit?: () => void
+  onHover?: (entityId: string | null) => void
+  isSelected?: boolean
 }
 
-export function EntityCard({ entity, onClick, onEdit }: EntityCardProps) {
+export function EntityCard({ entity, onClick, onEdit, onHover, isSelected }: EntityCardProps) {
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation()
     onEdit?.()
   }
 
+  const handleMouseEnter = () => {
+    onHover?.(entity.id)
+  }
+
+  const handleMouseLeave = () => {
+    onHover?.(null)
+  }
+
   return (
     <div
       onClick={onClick}
-      className={`p-3 border border-border rounded-md bg-background hover:bg-muted/50 transition-colors ${
-        onClick ? 'cursor-pointer' : ''
-      }`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`p-3 border rounded-md transition-colors ${
+        isSelected
+          ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+          : 'border-border bg-background hover:bg-muted/50'
+      } ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">

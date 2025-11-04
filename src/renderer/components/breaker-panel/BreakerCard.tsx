@@ -4,11 +4,12 @@ interface BreakerCardProps {
   breaker: BreakerWithEntityCount
   allBreakers?: BreakerWithEntityCount[]
   rooms?: string[]
+  isHighlighted?: boolean
   onClick?: () => void
   onPowerToggle?: (breakerId: string, isPowered: boolean) => void
 }
 
-export function BreakerCard({ breaker, allBreakers, rooms, onClick, onPowerToggle }: BreakerCardProps) {
+export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false, onClick, onPowerToggle }: BreakerCardProps) {
   const isSpare = breaker.status === 'spare'
   const hasEntities = breaker.entity_count > 0
   const isPoweredOff = !breaker.is_powered
@@ -34,7 +35,9 @@ export function BreakerCard({ breaker, allBreakers, rooms, onClick, onPowerToggl
     <button
       onClick={onClick}
       className={`w-full p-3 border rounded transition-colors text-left ${
-        isSpare || isTandemBase
+        isHighlighted
+          ? 'border-accent bg-accent/20 ring-2 ring-accent/40 shadow-lg'
+          : isSpare || isTandemBase
           ? 'border-muted bg-muted/30 hover:bg-muted/50'
           : isPoweredOff
           ? 'border-orange-500/50 bg-orange-50/50 hover:bg-orange-100/50 dark:bg-orange-950/30 dark:hover:bg-orange-950/50'

@@ -40,3 +40,4 @@ pnpm-debug.log*
 # Electron
 app/
 release/
+.devswarm-temp/

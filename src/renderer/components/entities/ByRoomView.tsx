@@ -10,9 +10,13 @@ interface ByRoomViewProps {
   roomFilter?: string
   searchQuery?: string
   onToolbarReady?: (handlers: { expandAll: () => void; collapseAll: () => void; hasMultipleSections: boolean }) => void
+  selectedEntityId?: string | null
+  onEntitySelect?: (entityId: string | null) => void
+  hoveredEntityId?: string | null
+  onEntityHover?: (entityId: string | null) => void
 }
 
-export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all', searchQuery = '', onToolbarReady }: ByRoomViewProps) {
+export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all', searchQuery = '', onToolbarReady, selectedEntityId, onEntitySelect, hoveredEntityId, onEntityHover }: ByRoomViewProps) {
   const { data: allEntitiesByRoom, isLoading, error } = useEntitiesByRoom(panelId)
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
@@ -165,6 +169,9 @@ export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all', se
                     <EntityCard
                       key={entity.id}
                       entity={entity}
+                      isSelected={selectedEntityId === entity.id}
+                      onClick={() => onEntitySelect?.(selectedEntityId === entity.id ? null : entity.id)}
+                      onHover={onEntityHover}
                       onEdit={() => setSelectedEntity(entity)}
                     />
                   ))}

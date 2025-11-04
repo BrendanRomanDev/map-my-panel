@@ -11,9 +11,13 @@ interface ByBreakerViewProps {
   roomFilter?: string
   searchQuery?: string
   onToolbarReady?: (handlers: { expandAll: () => void; collapseAll: () => void; hasMultipleSections: boolean }) => void
+  selectedEntityId?: string | null
+  onEntitySelect?: (entityId: string | null) => void
+  hoveredEntityId?: string | null
+  onEntityHover?: (entityId: string | null) => void
 }
 
-export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all', searchQuery = '', onToolbarReady }: ByBreakerViewProps) {
+export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all', searchQuery = '', onToolbarReady, selectedEntityId, onEntitySelect, hoveredEntityId, onEntityHover }: ByBreakerViewProps) {
   const { data: breakers, isLoading: breakersLoading, error: breakersError } = useBreakers(panelId)
   const { data: allEntities, isLoading: entitiesLoading, error: entitiesError } = useEntities(panelId)
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
@@ -182,6 +186,9 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
                   <EntityCard
                     key={entity.id}
                     entity={entity}
+                    isSelected={selectedEntityId === entity.id}
+                    onClick={() => onEntitySelect?.(selectedEntityId === entity.id ? null : entity.id)}
+                    onHover={onEntityHover}
                     onEdit={() => setSelectedEntity(entity)}
                   />
                 ))}
@@ -222,6 +229,9 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
                     <EntityCard
                       key={entity.id}
                       entity={entity}
+                      isSelected={selectedEntityId === entity.id}
+                      onClick={() => onEntitySelect?.(selectedEntityId === entity.id ? null : entity.id)}
+                      onHover={onEntityHover}
                       onEdit={() => setSelectedEntity(entity)}
                     />
                   ))}

@@ -8,9 +8,10 @@ import type { Panel, BreakerWithEntityCount } from '@shared/types'
 
 interface BreakerPanelGridProps {
   panelId: string
+  highlightedEntityId?: string | null
 }
 
-export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
+export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelGridProps) {
   const queryClient = useQueryClient()
 
   // Query for panel data
@@ -26,6 +27,14 @@ export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
 
   // Read the setting from localStorage
   const showRoomsOnBreakers = localStorage.getItem('showRoomsOnBreakers') === 'true'
+
+  // Get highlighted entity's breaker IDs
+  const highlightedBreakerIds = useMemo(() => {
+    if (!highlightedEntityId || !entities) return new Set<string>()
+
+    const entity = entities.find(e => e.id === highlightedEntityId)
+    return entity ? new Set(entity.breaker_ids) : new Set<string>()
+  }, [highlightedEntityId, entities])
 
   // Calculate rooms for each breaker
   const breakerRooms = useMemo(() => {
@@ -186,6 +195,7 @@ export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
                           breaker={breaker}
                           allBreakers={breakers}
                           rooms={breakerRooms.get(breaker.id)}
+                          isHighlighted={highlightedBreakerIds.has(breaker.id)}
                           onClick={() => setSelectedBreaker(breaker)}
                           onPowerToggle={handlePowerToggle}
                         />
@@ -210,6 +220,7 @@ export function BreakerPanelGrid({ panelId }: BreakerPanelGridProps) {
                           breaker={breaker}
                           allBreakers={breakers}
                           rooms={breakerRooms.get(breaker.id)}
+                          isHighlighted={highlightedBreakerIds.has(breaker.id)}
                           onClick={() => setSelectedBreaker(breaker)}
                           onPowerToggle={handlePowerToggle}
                         />

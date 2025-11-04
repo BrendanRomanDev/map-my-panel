@@ -35,6 +35,11 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
   const [showPropertyModal, setShowPropertyModal] = useState(false)
   const [showPanelModal, setShowPanelModal] = useState(false)
   const [toolbarHandlers, setToolbarHandlers] = useState<{ expandAll: () => void; collapseAll: () => void; hasMultipleSections: boolean } | null>(null)
+  const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null)
+  const [hoveredEntityId, setHoveredEntityId] = useState<string | null>(null)
+
+  // Read the highlight setting
+  const highlightBreakerOnHover = localStorage.getItem('highlightBreakerOnHover') !== 'false'
 
   // Query for property and panel data using IDs
   const { data: property, isLoading: isLoadingProperty, isError: isErrorProperty } = useQuery({
@@ -362,8 +367,8 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
 
               {/* Content area */}
               <div className="flex-1 overflow-auto p-4">
-                {grouping === 'room' && <ByRoomView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} onToolbarReady={setToolbarHandlers} />}
-                {grouping === 'breaker' && <ByBreakerView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} onToolbarReady={setToolbarHandlers} />}
+                {grouping === 'room' && <ByRoomView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} onToolbarReady={setToolbarHandlers} selectedEntityId={selectedEntityId} onEntitySelect={setSelectedEntityId} hoveredEntityId={hoveredEntityId} onEntityHover={highlightBreakerOnHover ? setHoveredEntityId : undefined} />}
+                {grouping === 'breaker' && <ByBreakerView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} onToolbarReady={setToolbarHandlers} selectedEntityId={selectedEntityId} onEntitySelect={setSelectedEntityId} hoveredEntityId={hoveredEntityId} onEntityHover={highlightBreakerOnHover ? setHoveredEntityId : undefined} />}
               </div>
 
               {/* Sticky Add Entity Button */}
@@ -379,7 +384,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
 
             {/* Main panel view */}
             <main className="flex-1 p-6 overflow-auto">
-              <BreakerPanelGrid panelId={panel.id} />
+              <BreakerPanelGrid panelId={panel.id} highlightedEntityId={hoveredEntityId || selectedEntityId} />
             </main>
           </>
         ) : (

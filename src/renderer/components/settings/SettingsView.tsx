@@ -80,6 +80,11 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
     return saved === 'true'
   })
 
+  const [highlightBreakerOnHover, setHighlightBreakerOnHover] = useState(() => {
+    const saved = localStorage.getItem('highlightBreakerOnHover')
+    return saved !== 'false' // Default to true
+  })
+
   // Query for property and panel data using IDs - React Query handles caching
   const { data: property } = useQuery({
     queryKey: ['property', propertyId],
@@ -850,6 +855,27 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
                       <div className="text-sm font-medium">Show rooms on breaker cards</div>
                       <div className="text-xs text-muted-foreground">
                         Display which rooms are affected by each breaker on the panel grid
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="border-t border-border pt-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={highlightBreakerOnHover}
+                      onChange={(e) => {
+                        const newValue = e.target.checked
+                        setHighlightBreakerOnHover(newValue)
+                        localStorage.setItem('highlightBreakerOnHover', String(newValue))
+                      }}
+                      className="w-4 h-4 rounded border-border"
+                    />
+                    <div>
+                      <div className="text-sm font-medium">Highlight breaker on entity hover</div>
+                      <div className="text-xs text-muted-foreground">
+                        When hovering over an entity card, highlight its associated breaker(s) on the panel grid
                       </div>
                     </div>
                   </label>
