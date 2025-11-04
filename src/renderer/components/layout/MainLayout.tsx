@@ -9,6 +9,7 @@ import { AddEntityModal } from '../entities/AddEntityModal'
 import { AddPanelModal } from '../property/AddPanelModal'
 import { PropertySelectorModal } from '../property/PropertySelectorModal'
 import { PanelSelectorModal } from '../property/PanelSelectorModal'
+import { queryKeys } from '../../lib/queryKeys'
 
 interface MainLayoutProps {
   propertyId: string
@@ -61,7 +62,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
 
   // Get all entities to extract unique rooms and types
   const { data: allEntities } = useQuery({
-    queryKey: ['entities', 'byPanel', panelId],
+    queryKey: queryKeys.entities.byPanel(panelId),
     queryFn: () => window.electronAPI.entities.listByPanel(panelId),
     enabled: !!panelId
   })
