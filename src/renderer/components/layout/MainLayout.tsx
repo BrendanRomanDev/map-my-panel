@@ -368,7 +368,10 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
               {/* Content area */}
               <div
                 className="flex-1 overflow-auto p-4"
-                onMouseLeave={() => setHoveredEntityId(null)}
+                onMouseLeave={() => {
+                  setHoveredEntityId(null)
+                  setSelectedEntityId(null)
+                }}
               >
                 {grouping === 'room' && <ByRoomView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} onToolbarReady={setToolbarHandlers} selectedEntityId={selectedEntityId} onEntitySelect={setSelectedEntityId} hoveredEntityId={hoveredEntityId} onEntityHover={highlightBreakerOnHover ? setHoveredEntityId : undefined} />}
                 {grouping === 'breaker' && <ByBreakerView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} onToolbarReady={setToolbarHandlers} selectedEntityId={selectedEntityId} onEntitySelect={setSelectedEntityId} hoveredEntityId={hoveredEntityId} onEntityHover={highlightBreakerOnHover ? setHoveredEntityId : undefined} />}
@@ -387,7 +390,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
 
             {/* Main panel view */}
             <main className="flex-1 p-6 overflow-auto">
-              <BreakerPanelGrid panelId={panel.id} highlightedEntityId={hoveredEntityId || selectedEntityId} />
+              <BreakerPanelGrid panelId={panel.id} highlightedEntityId={hoveredEntityId || selectedEntityId || null} />
             </main>
           </>
         ) : (

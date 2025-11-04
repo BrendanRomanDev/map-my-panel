@@ -31,7 +31,7 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
 
   // Get highlighted entity's breaker IDs
   const highlightedBreakerIds = useMemo(() => {
-    if (!highlightedEntityId || !entities) return new Set<string>()
+    if (!highlightedEntityId || highlightedEntityId === null || !entities) return new Set<string>()
 
     const entity = entities.find(e => e.id === highlightedEntityId)
     return entity ? new Set(entity.breaker_ids) : new Set<string>()
