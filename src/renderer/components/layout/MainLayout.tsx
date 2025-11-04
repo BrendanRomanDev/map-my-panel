@@ -34,6 +34,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
   const [showAddPanelModal, setShowAddPanelModal] = useState(false)
   const [showPropertyModal, setShowPropertyModal] = useState(false)
   const [showPanelModal, setShowPanelModal] = useState(false)
+  const [toolbarHandlers, setToolbarHandlers] = useState<{ expandAll: () => void; collapseAll: () => void; hasMultipleSections: boolean } | null>(null)
 
   // Query for property and panel data using IDs
   const { data: property, isLoading: isLoadingProperty, isError: isErrorProperty } = useQuery({
@@ -305,9 +306,9 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
                 </div>
               </div>
 
-              {/* Search input */}
-              <div className="px-4 pt-3 pb-2">
-                <div className="relative">
+              {/* Search input with expand/collapse buttons */}
+              <div className="px-4 pt-3 pb-2 flex gap-2 items-center">
+                <div className="relative flex-1">
                   <svg
                     className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground"
                     fill="none"
@@ -334,12 +335,35 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
                     </button>
                   )}
                 </div>
+                {/* Expand/collapse buttons */}
+                {toolbarHandlers?.hasMultipleSections && (
+                  <div className="flex gap-1">
+                    <button
+                      onClick={toolbarHandlers.expandAll}
+                      className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      title="Expand all sections"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={toolbarHandlers.collapseAll}
+                      className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                      title="Collapse all sections"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Content area */}
               <div className="flex-1 overflow-auto p-4">
-                {grouping === 'room' && <ByRoomView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} />}
-                {grouping === 'breaker' && <ByBreakerView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} />}
+                {grouping === 'room' && <ByRoomView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} onToolbarReady={setToolbarHandlers} />}
+                {grouping === 'breaker' && <ByBreakerView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} onToolbarReady={setToolbarHandlers} />}
               </div>
 
               {/* Sticky Add Entity Button */}

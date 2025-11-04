@@ -10,9 +10,10 @@ interface ByBreakerViewProps {
   typeFilter?: string
   roomFilter?: string
   searchQuery?: string
+  onToolbarReady?: (handlers: { expandAll: () => void; collapseAll: () => void; hasMultipleSections: boolean }) => void
 }
 
-export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all', searchQuery = '' }: ByBreakerViewProps) {
+export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all', searchQuery = '', onToolbarReady }: ByBreakerViewProps) {
   const { data: breakers, isLoading: breakersLoading, error: breakersError } = useBreakers(panelId)
   const { data: allEntities, isLoading: entitiesLoading, error: entitiesError } = useEntities(panelId)
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
@@ -132,6 +133,14 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
     }
   }, [searchQuery])
 
+  // Notify parent of toolbar handlers
+  useEffect(() => {
+    if (onToolbarReady) {
+      const hasMultipleSections = ((unmappedEntities.length > 0 ? 1 : 0) + breakersWithEntities.length) > 1
+      onToolbarReady({ expandAll, collapseAll, hasMultipleSections })
+    }
+  }, [unmappedEntities.length, breakersWithEntities.length, onToolbarReady])
+
   if (breakersWithEntities.length === 0 && unmappedEntities.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -145,30 +154,6 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
 
   return (
     <>
-      {/* Collapse/Expand toolbar - top right corner */}
-      {((unmappedEntities.length > 0 ? 1 : 0) + breakersWithEntities.length) > 1 && (
-        <div className="flex gap-1 mb-3 justify-end">
-          <button
-            onClick={expandAll}
-            className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title="Expand all sections"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-          <button
-            onClick={collapseAll}
-            className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title="Collapse all sections"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-            </svg>
-          </button>
-        </div>
-      )}
-
       <div className="space-y-4">
         {/* Unmapped entities section - shown at top */}
         {unmappedEntities.length > 0 && (
