@@ -22,9 +22,14 @@ export function EntityCard({ entity, onClick, onEdit, onHover, isSelected }: Ent
     onHover?.(null)
   }
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onClick?.()
+  }
+
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       className={`p-3 border rounded-md transition-colors ${

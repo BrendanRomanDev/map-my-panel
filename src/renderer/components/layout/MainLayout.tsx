@@ -246,7 +246,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
       </header>
 
       {/* Main content area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden" onClick={() => setSelectedEntityId(null)}>
         {showSettings ? (
           /* Settings View - Full Width */
           <div className="flex-1 p-6 overflow-auto">
