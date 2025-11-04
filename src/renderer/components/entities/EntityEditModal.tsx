@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useBreakers } from '../../hooks/useBreakers'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
@@ -24,6 +24,38 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  // Filter and sort breakers for display
+  const displayBreakers = useMemo(() => {
+    if (!allBreakers) return []
+
+    // Filter out tandem base positions (positions without slots that have tandem breakers)
+    const filtered = allBreakers.filter(breaker => {
+      // If this breaker has a slot, keep it
+      if (breaker.position_slot) return true
+
+      // If this breaker has no slot, check if there are other breakers with the same position but with slots
+      const hasTandemBreakers = allBreakers.some(
+        b => b.position === breaker.position && b.position_slot
+      )
+
+      // Keep only if there are NO tandem breakers (i.e., it's a regular non-tandem position)
+      return !hasTandemBreakers
+    })
+
+    // Sort by position number, then by slot (A before B)
+    return filtered.sort((a, b) => {
+      // First sort by position number
+      if (a.position !== b.position) {
+        return a.position - b.position
+      }
+
+      // If positions are the same, sort by slot
+      const slotA = a.position_slot || ''
+      const slotB = b.position_slot || ''
+      return slotA.localeCompare(slotB)
+    })
+  }, [allBreakers])
 
   // Initialize form when entity changes
   useEffect(() => {
@@ -225,13 +257,13 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
               <label className="block text-sm font-medium mb-2">
                 Assigned Breakers (optional)
               </label>
-              {!allBreakers || allBreakers.length === 0 ? (
+              {!displayBreakers || displayBreakers.length === 0 ? (
                 <div className="text-sm text-muted-foreground italic">
                   No breakers available
                 </div>
               ) : (
                 <div className="max-h-[200px] overflow-y-auto border border-input rounded-md bg-background">
-                  {allBreakers.map(breaker => {
+                  {displayBreakers.map(breaker => {
                     const isChecked = breakerIds.includes(breaker.id)
                     return (
                       <label
