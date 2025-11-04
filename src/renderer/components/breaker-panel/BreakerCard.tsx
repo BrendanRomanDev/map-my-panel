@@ -7,9 +7,11 @@ interface BreakerCardProps {
   isHighlighted?: boolean
   onClick?: () => void
   onPowerToggle?: (breakerId: string, isPowered: boolean) => void
+  showCollapse?: boolean
+  onCollapse?: () => void
 }
 
-export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false, onClick, onPowerToggle }: BreakerCardProps) {
+export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false, onClick, onPowerToggle, showCollapse = false, onCollapse }: BreakerCardProps) {
   const isSpare = breaker.status === 'spare'
   const hasEntities = breaker.entity_count > 0
   const isPoweredOff = !breaker.is_powered
@@ -48,6 +50,20 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
         {/* Position and label */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
+            {showCollapse && onCollapse && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCollapse()
+                }}
+                className="p-0.5 hover:bg-muted rounded transition-colors"
+                title="Collapse tandem"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </button>
+            )}
             <span className="font-mono text-sm font-medium">
               {breaker.position}
               {breaker.position_slot && (
