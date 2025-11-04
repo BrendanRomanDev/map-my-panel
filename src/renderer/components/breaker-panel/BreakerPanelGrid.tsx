@@ -320,12 +320,12 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-mono text-sm font-medium">{leftPosition}</span>
-                                    <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
                                       Tandem ({tandemBreakers.length})
                                     </span>
                                     {linkedRelationship && (
                                       <span
-                                        className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1 cursor-pointer hover:bg-accent/80 transition-colors"
+                                        className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200 inline-flex items-center gap-1 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900 transition-colors"
                                         onMouseEnter={(e) => {
                                           e.stopPropagation()
                                           // Find the first linked breaker and hover it (which will highlight both)
@@ -450,12 +450,12 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-mono text-sm font-medium">{rightPosition}</span>
-                                    <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200">
                                       Tandem ({tandemBreakers.length})
                                     </span>
                                     {linkedRelationship && (
                                       <span
-                                        className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1 cursor-pointer hover:bg-accent/80 transition-colors"
+                                        className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200 inline-flex items-center gap-1 cursor-pointer hover:bg-blue-200 dark:hover:bg-blue-900 transition-colors"
                                         onMouseEnter={(e) => {
                                           e.stopPropagation()
                                           // Find the first linked breaker and hover it (which will highlight both)
