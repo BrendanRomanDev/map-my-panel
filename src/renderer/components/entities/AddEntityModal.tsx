@@ -136,7 +136,7 @@ export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, cr
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Kitchen Outlet 1"
               autoFocus
-              className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
@@ -159,7 +159,7 @@ export function AddEntityModal({ panelId, isOpen, onClose, initialBreakerIds, cr
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="e.g., Behind refrigerator"
-              className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary"
             />
           </div>
 
