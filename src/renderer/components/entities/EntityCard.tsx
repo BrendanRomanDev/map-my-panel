@@ -60,8 +60,25 @@ export function EntityCard({ entity, onClick, onEdit }: EntityCardProps) {
             </button>
           )}
           {entity.breaker_ids.length === 0 && (
-            <div className="px-2 py-0.5 text-xs rounded bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
-              Unmapped
+            <div
+              className="p-1 rounded text-yellow-600 dark:text-yellow-400"
+              title="Not attached to any breaker"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
             </div>
           )}
           {entity.breaker_ids.length > 1 && (
