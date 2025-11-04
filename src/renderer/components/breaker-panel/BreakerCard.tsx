@@ -7,9 +7,10 @@ interface BreakerCardProps {
   isHighlighted?: boolean
   onClick?: () => void
   onPowerToggle?: (breakerId: string, isPowered: boolean) => void
+  onHover?: (breakerId: string | null) => void
 }
 
-export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false, onClick, onPowerToggle }: BreakerCardProps) {
+export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false, onClick, onPowerToggle, onHover }: BreakerCardProps) {
   const isSpare = breaker.status === 'spare'
   const hasEntities = breaker.entity_count > 0
   const isPoweredOff = !breaker.is_powered
@@ -34,6 +35,8 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
   return (
     <button
       onClick={onClick}
+      onMouseEnter={() => onHover?.(breaker.id)}
+      onMouseLeave={() => onHover?.(null)}
       className={`w-full p-3 border-2 rounded transition-all text-left ${
         isHighlighted
           ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'

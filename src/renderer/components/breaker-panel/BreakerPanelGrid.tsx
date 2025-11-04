@@ -25,17 +25,35 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
   const { data: entities } = useEntities(panelId)
   const [selectedBreaker, setSelectedBreaker] = useState<BreakerWithEntityCount | null>(null)
   const [expandedTandems, setExpandedTandems] = useState<Set<number>>(new Set())
+  const [hoveredPosition, setHoveredPosition] = useState<number | null>(null)
+  const [hoveredBreakerId, setHoveredBreakerId] = useState<string | null>(null)
 
   // Read the setting from localStorage
   const showRoomsOnBreakers = localStorage.getItem('showRoomsOnBreakers') === 'true'
 
-  // Get highlighted entity's breaker IDs
+  // Get highlighted breaker IDs from entity hover + breaker hover
   const highlightedBreakerIds = useMemo(() => {
-    if (!highlightedEntityId || highlightedEntityId === null || !entities) return new Set<string>()
+    const ids = new Set<string>()
 
-    const entity = entities.find(e => e.id === highlightedEntityId)
-    return entity ? new Set(entity.breaker_ids) : new Set<string>()
-  }, [highlightedEntityId, entities])
+    // Add breakers from highlighted entity
+    if (highlightedEntityId && entities) {
+      const entity = entities.find(e => e.id === highlightedEntityId)
+      if (entity) {
+        entity.breaker_ids.forEach(id => ids.add(id))
+      }
+    }
+
+    // Add breakers from breaker hover (the hovered breaker + its linked breaker)
+    if (hoveredBreakerId && breakers) {
+      ids.add(hoveredBreakerId)
+      const hoveredBreaker = breakers.find(b => b.id === hoveredBreakerId)
+      if (hoveredBreaker?.linked_breaker_id) {
+        ids.add(hoveredBreaker.linked_breaker_id)
+      }
+    }
+
+    return ids
+  }, [highlightedEntityId, entities, hoveredBreakerId, breakers])
 
   // Calculate rooms for each breaker
   const breakerRooms = useMemo(() => {
@@ -171,10 +189,55 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
         })
       } else {
         next.delete(position)
+
+        // Auto-collapse linked tandem positions
+        const positionBreakers = breakersByPosition.get(position) || []
+        positionBreakers.forEach(breaker => {
+          if (breaker.linked_breaker_id) {
+            const linkedBreaker = breakers?.find(b => b.id === breaker.linked_breaker_id)
+            if (linkedBreaker && linkedBreaker.position !== position) {
+              // Check if linked breaker's position has tandems
+              const linkedPositionBreakers = breakersByPosition.get(linkedBreaker.position) || []
+              if (linkedPositionBreakers.some(b => b.position_slot)) {
+                next.delete(linkedBreaker.position)
+              }
+            }
+          }
+        })
       }
 
       return next
     })
+  }
+
+  // Helper to check if a position should be highlighted by hover
+  // Returns true if position is directly hovered OR linked to hovered position
+  const isPositionHovered = (position: number): boolean => {
+    if (!hoveredPosition) return false
+    if (hoveredPosition === position) return true
+
+    // Check if this position is linked to the hovered position
+    const positionBreakers = breakersByPosition.get(position) || []
+    const hoveredPositionBreakers = breakersByPosition.get(hoveredPosition) || []
+
+    return positionBreakers.some(breaker => {
+      if (!breaker.linked_breaker_id) return false
+      return hoveredPositionBreakers.some(hb => hb.id === breaker.linked_breaker_id)
+    })
+  }
+
+  // Helper to get linked relationship badge text for a position
+  const getLinkedRelationship = (position: number, tandemBreakers: BreakerWithEntityCount[]): string | null => {
+    for (const breaker of tandemBreakers) {
+      if (breaker.linked_breaker_id) {
+        const linkedBreaker = breakers?.find(b => b.id === breaker.linked_breaker_id)
+        if (linkedBreaker && linkedBreaker.position !== position) {
+          // Format: "17B → 19A"
+          return `${breaker.position}${breaker.position_slot || ''} ↔ ${linkedBreaker.position}${linkedBreaker.position_slot || ''}`
+        }
+      }
+    }
+    return null
   }
 
   // Calculate number of rows (each row has 2 positions - left and right)
@@ -232,34 +295,30 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                           rooms?.forEach(r => allRooms.add(r))
                         })
 
-                        // Check if any tandem breaker is linked to another position
-                        const hasLinkedPosition = tandemBreakers.some(breaker => {
-                          if (breaker.linked_breaker_id) {
-                            const linkedBreaker = breakers?.find(b => b.id === breaker.linked_breaker_id)
-                            return linkedBreaker && linkedBreaker.position !== leftPosition
-                          }
-                          return false
-                        })
+                        // Get linked relationship text
+                        const linkedRelationship = getLinkedRelationship(leftPosition, tandemBreakers)
 
                         return (
                           <>
                             {/* Base position - always visible, acts as toggle */}
                             <button
                               onClick={() => toggleTandem(leftPosition)}
+                              onMouseEnter={() => setHoveredPosition(leftPosition)}
+                              onMouseLeave={() => setHoveredPosition(null)}
                               className={`w-full p-3 border-2 rounded transition-all text-left ${
-                                !isExpanded && tandemBreakers.some(b => highlightedBreakerIds.has(b.id))
-                                  ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl'
+                                (!isExpanded && tandemBreakers.some(b => highlightedBreakerIds.has(b.id))) || isPositionHovered(leftPosition)
+                                  ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'
                                   : 'border-accent/50 bg-accent/5 hover:bg-accent/10'
                               }`}
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-mono text-sm font-medium">{leftPosition}</span>
                                     <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
                                       Tandem ({tandemBreakers.length})
                                     </span>
-                                    {hasLinkedPosition && !isExpanded && (
+                                    {linkedRelationship && (
                                       <span className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1">
                                         <svg
                                           xmlns="http://www.w3.org/2000/svg"
@@ -275,7 +334,7 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                                           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                                         </svg>
-                                        Linked
+                                        {linkedRelationship}
                                       </span>
                                     )}
                                   </div>
@@ -300,6 +359,7 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                   isHighlighted={highlightedBreakerIds.has(breaker.id)}
                                   onClick={() => setSelectedBreaker(breaker)}
                                   onPowerToggle={handlePowerToggle}
+                                  onHover={setHoveredBreakerId}
                                 />
                               </div>
                             ))}
@@ -317,6 +377,7 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                           isHighlighted={highlightedBreakerIds.has(breaker.id)}
                           onClick={() => setSelectedBreaker(breaker)}
                           onPowerToggle={handlePowerToggle}
+                          onHover={setHoveredBreakerId}
                         />
                       ))
                     })()
@@ -345,34 +406,30 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                           rooms?.forEach(r => allRooms.add(r))
                         })
 
-                        // Check if any tandem breaker is linked to another position
-                        const hasLinkedPosition = tandemBreakers.some(breaker => {
-                          if (breaker.linked_breaker_id) {
-                            const linkedBreaker = breakers?.find(b => b.id === breaker.linked_breaker_id)
-                            return linkedBreaker && linkedBreaker.position !== rightPosition
-                          }
-                          return false
-                        })
+                        // Get linked relationship text
+                        const linkedRelationship = getLinkedRelationship(rightPosition, tandemBreakers)
 
                         return (
                           <>
                             {/* Base position - always visible, acts as toggle */}
                             <button
                               onClick={() => toggleTandem(rightPosition)}
+                              onMouseEnter={() => setHoveredPosition(rightPosition)}
+                              onMouseLeave={() => setHoveredPosition(null)}
                               className={`w-full p-3 border-2 rounded transition-all text-left ${
-                                !isExpanded && tandemBreakers.some(b => highlightedBreakerIds.has(b.id))
-                                  ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl'
+                                (!isExpanded && tandemBreakers.some(b => highlightedBreakerIds.has(b.id))) || isPositionHovered(rightPosition)
+                                  ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'
                                   : 'border-accent/50 bg-accent/5 hover:bg-accent/10'
                               }`}
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <div className="flex-1">
-                                  <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <span className="font-mono text-sm font-medium">{rightPosition}</span>
                                     <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
                                       Tandem ({tandemBreakers.length})
                                     </span>
-                                    {hasLinkedPosition && !isExpanded && (
+                                    {linkedRelationship && (
                                       <span className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1">
                                         <svg
                                           xmlns="http://www.w3.org/2000/svg"
@@ -388,7 +445,7 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                           <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
                                           <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
                                         </svg>
-                                        Linked
+                                        {linkedRelationship}
                                       </span>
                                     )}
                                   </div>
@@ -413,6 +470,7 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                   isHighlighted={highlightedBreakerIds.has(breaker.id)}
                                   onClick={() => setSelectedBreaker(breaker)}
                                   onPowerToggle={handlePowerToggle}
+                                  onHover={setHoveredBreakerId}
                                 />
                               </div>
                             ))}
@@ -430,6 +488,7 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                           isHighlighted={highlightedBreakerIds.has(breaker.id)}
                           onClick={() => setSelectedBreaker(breaker)}
                           onPowerToggle={handlePowerToggle}
+                          onHover={setHoveredBreakerId}
                         />
                       ))
                     })()
