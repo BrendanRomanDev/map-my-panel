@@ -150,11 +150,29 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
   const toggleTandem = (position: number) => {
     setExpandedTandems(prev => {
       const next = new Set(prev)
-      if (next.has(position)) {
-        next.delete(position)
-      } else {
+      const isExpanding = !next.has(position)
+
+      if (isExpanding) {
         next.add(position)
+
+        // Auto-expand linked tandem positions
+        const positionBreakers = breakersByPosition.get(position) || []
+        positionBreakers.forEach(breaker => {
+          if (breaker.linked_breaker_id) {
+            const linkedBreaker = breakers?.find(b => b.id === breaker.linked_breaker_id)
+            if (linkedBreaker && linkedBreaker.position !== position) {
+              // Check if linked breaker's position has tandems
+              const linkedPositionBreakers = breakersByPosition.get(linkedBreaker.position) || []
+              if (linkedPositionBreakers.some(b => b.position_slot)) {
+                next.add(linkedBreaker.position)
+              }
+            }
+          }
+        })
+      } else {
+        next.delete(position)
       }
+
       return next
     })
   }
@@ -214,6 +232,15 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                           rooms?.forEach(r => allRooms.add(r))
                         })
 
+                        // Check if any tandem breaker is linked to another position
+                        const hasLinkedPosition = tandemBreakers.some(breaker => {
+                          if (breaker.linked_breaker_id) {
+                            const linkedBreaker = breakers?.find(b => b.id === breaker.linked_breaker_id)
+                            return linkedBreaker && linkedBreaker.position !== leftPosition
+                          }
+                          return false
+                        })
+
                         return (
                           <>
                             {/* Base position - always visible, acts as toggle */}
@@ -228,6 +255,25 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                     <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
                                       Tandem ({tandemBreakers.length})
                                     </span>
+                                    {hasLinkedPosition && !isExpanded && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1">
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="10"
+                                          height="10"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                        </svg>
+                                        Linked
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-xs text-muted-foreground mt-0.5">
                                     {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
@@ -295,6 +341,15 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                           rooms?.forEach(r => allRooms.add(r))
                         })
 
+                        // Check if any tandem breaker is linked to another position
+                        const hasLinkedPosition = tandemBreakers.some(breaker => {
+                          if (breaker.linked_breaker_id) {
+                            const linkedBreaker = breakers?.find(b => b.id === breaker.linked_breaker_id)
+                            return linkedBreaker && linkedBreaker.position !== rightPosition
+                          }
+                          return false
+                        })
+
                         return (
                           <>
                             {/* Base position - always visible, acts as toggle */}
@@ -309,6 +364,25 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                                     <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
                                       Tandem ({tandemBreakers.length})
                                     </span>
+                                    {hasLinkedPosition && !isExpanded && (
+                                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1">
+                                        <svg
+                                          xmlns="http://www.w3.org/2000/svg"
+                                          width="10"
+                                          height="10"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                        </svg>
+                                        Linked
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="text-xs text-muted-foreground mt-0.5">
                                     {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
