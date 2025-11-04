@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useEntitiesByRoom } from '../../hooks/useEntities'
 import { EntityCard } from './EntityCard'
 import { EntityEditModal } from './EntityEditModal'
@@ -13,6 +13,7 @@ interface ByRoomViewProps {
 export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all' }: ByRoomViewProps) {
   const { data: allEntitiesByRoom, isLoading, error } = useEntitiesByRoom(panelId)
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
 
   // Filter entities by type and room, always include "Unassigned" group
   const entitiesByRoom = allEntitiesByRoom
@@ -23,6 +24,32 @@ export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all' }: 
         typeFilter === 'all' || entity.entity_type === typeFilter
       )
     })).filter(group => group.entities.length > 0)
+
+  // Get all section IDs for collapse/expand all
+  const allSectionIds = useMemo(() =>
+    entitiesByRoom?.map(({ room }) => room) || [],
+    [entitiesByRoom]
+  )
+
+  const toggleSection = (sectionId: string) => {
+    setCollapsedSections(prev => {
+      const next = new Set(prev)
+      if (next.has(sectionId)) {
+        next.delete(sectionId)
+      } else {
+        next.add(sectionId)
+      }
+      return next
+    })
+  }
+
+  const collapseAll = () => {
+    setCollapsedSections(new Set(allSectionIds))
+  }
+
+  const expandAll = () => {
+    setCollapsedSections(new Set())
+  }
 
   if (isLoading) {
     return (
@@ -55,24 +82,62 @@ export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all' }: 
 
   return (
     <>
+      {/* Collapse/Expand toolbar */}
+      {entitiesByRoom && entitiesByRoom.length > 1 && (
+        <div className="flex gap-2 mb-3 px-1">
+          <button
+            onClick={expandAll}
+            className="text-xs px-2 py-1 rounded border border-border hover:bg-muted transition-colors"
+          >
+            Expand All
+          </button>
+          <button
+            onClick={collapseAll}
+            className="text-xs px-2 py-1 rounded border border-border hover:bg-muted transition-colors"
+          >
+            Collapse All
+          </button>
+        </div>
+      )}
+
       <div className="space-y-4">
-        {entitiesByRoom.map(({ room, entities }) => (
-          <div key={room || 'no-room'}>
-            <div className="text-sm font-semibold mb-2 px-1 flex items-center gap-2">
-              {room === 'Unassigned' && <span className="flex h-2 w-2 rounded-full bg-yellow-500" />}
-              <span>{room} ({entities.length})</span>
+        {entitiesByRoom?.map(({ room, entities }) => {
+          const isCollapsed = collapsedSections.has(room)
+
+          return (
+            <div key={room || 'no-room'}>
+              <button
+                onClick={() => toggleSection(room)}
+                className="w-full text-sm font-semibold mb-2 px-1 flex items-center gap-2 hover:text-primary transition-colors text-left"
+              >
+                {/* Chevron icon */}
+                <svg
+                  className={`w-4 h-4 transition-transform ${isCollapsed ? '' : 'rotate-90'}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+
+                {room === 'Unassigned' && <span className="flex h-2 w-2 rounded-full bg-yellow-500" />}
+                <span>{room} ({entities.length})</span>
+              </button>
+
+              {!isCollapsed && (
+                <div className="space-y-2">
+                  {entities.map(entity => (
+                    <EntityCard
+                      key={entity.id}
+                      entity={entity}
+                      onEdit={() => setSelectedEntity(entity)}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="space-y-2">
-              {entities.map(entity => (
-                <EntityCard
-                  key={entity.id}
-                  entity={entity}
-                  onEdit={() => setSelectedEntity(entity)}
-                />
-              ))}
-            </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <EntityEditModal
