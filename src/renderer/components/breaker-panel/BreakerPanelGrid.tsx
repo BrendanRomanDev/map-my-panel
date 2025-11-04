@@ -202,9 +202,11 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                     (() => {
                       const hasTandem = leftBreakers.some(b => b.position_slot)
                       const isExpanded = expandedTandems.has(leftPosition)
+                      const baseBreaker = leftBreakers.find(b => !b.position_slot)
+                      const tandemBreakers = leftBreakers.filter(b => b.position_slot)
 
-                      if (hasTandem && !isExpanded) {
-                        // Collapsed tandem view
+                      if (hasTandem && baseBreaker) {
+                        // Tandem breaker with base position
                         const entityCount = leftBreakers.reduce((sum, b) => sum + b.entity_count, 0)
                         const allRooms = new Set<string>()
                         leftBreakers.forEach(b => {
@@ -213,47 +215,60 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                         })
 
                         return (
-                          <button
-                            onClick={() => toggleTandem(leftPosition)}
-                            className="w-full p-3 border-2 border-accent/50 bg-accent/5 hover:bg-accent/10 rounded transition-all text-left"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-sm font-medium">{leftPosition}</span>
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
-                                    Tandem ({leftBreakers.filter(b => b.position_slot).length})
-                                  </span>
+                          <>
+                            {/* Base position - always visible, acts as toggle */}
+                            <button
+                              onClick={() => toggleTandem(leftPosition)}
+                              className="w-full p-3 border-2 border-accent/50 bg-accent/5 hover:bg-accent/10 rounded transition-all text-left"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-sm font-medium">{leftPosition}</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
+                                      Tandem ({tandemBreakers.length})
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
+                                    {allRooms.size > 0 && ` • ${allRooms.size} ${allRooms.size === 1 ? 'room' : 'rooms'}`}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-muted-foreground mt-0.5">
-                                  {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
-                                  {allRooms.size > 0 && ` • ${allRooms.size} ${allRooms.size === 1 ? 'room' : 'rooms'}`}
-                                </div>
+                                <svg className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                               </div>
-                              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </div>
-                          </button>
+                            </button>
+
+                            {/* Tandem breakers - shown when expanded */}
+                            {isExpanded && tandemBreakers.map(breaker => (
+                              <div key={breaker.id} className="ml-4">
+                                <BreakerCard
+                                  breaker={breaker}
+                                  allBreakers={breakers}
+                                  rooms={breakerRooms.get(breaker.id)}
+                                  isHighlighted={highlightedBreakerIds.has(breaker.id)}
+                                  onClick={() => setSelectedBreaker(breaker)}
+                                  onPowerToggle={handlePowerToggle}
+                                />
+                              </div>
+                            ))}
+                          </>
                         )
                       }
 
-                      // Expanded or regular breaker view
-                      return leftBreakers
-                        .filter(breaker => !hasTandem || breaker.position_slot) // Skip base position in tandems
-                        .map(breaker => (
-                          <BreakerCard
-                            key={breaker.id}
-                            breaker={breaker}
-                            allBreakers={breakers}
-                            rooms={breakerRooms.get(breaker.id)}
-                            isHighlighted={highlightedBreakerIds.has(breaker.id)}
-                            onClick={() => setSelectedBreaker(breaker)}
-                            onPowerToggle={handlePowerToggle}
-                            showCollapse={hasTandem && isExpanded}
-                            onCollapse={() => toggleTandem(leftPosition)}
-                          />
-                        ))
+                      // Regular breaker view (no tandem)
+                      return leftBreakers.map(breaker => (
+                        <BreakerCard
+                          key={breaker.id}
+                          breaker={breaker}
+                          allBreakers={breakers}
+                          rooms={breakerRooms.get(breaker.id)}
+                          isHighlighted={highlightedBreakerIds.has(breaker.id)}
+                          onClick={() => setSelectedBreaker(breaker)}
+                          onPowerToggle={handlePowerToggle}
+                        />
+                      ))
                     })()
                   ) : (
                     <div className="p-3 border border-dashed border-muted rounded text-center text-sm text-muted-foreground">
@@ -268,9 +283,11 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                     (() => {
                       const hasTandem = rightBreakers.some(b => b.position_slot)
                       const isExpanded = expandedTandems.has(rightPosition)
+                      const baseBreaker = rightBreakers.find(b => !b.position_slot)
+                      const tandemBreakers = rightBreakers.filter(b => b.position_slot)
 
-                      if (hasTandem && !isExpanded) {
-                        // Collapsed tandem view
+                      if (hasTandem && baseBreaker) {
+                        // Tandem breaker with base position
                         const entityCount = rightBreakers.reduce((sum, b) => sum + b.entity_count, 0)
                         const allRooms = new Set<string>()
                         rightBreakers.forEach(b => {
@@ -279,47 +296,60 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                         })
 
                         return (
-                          <button
-                            onClick={() => toggleTandem(rightPosition)}
-                            className="w-full p-3 border-2 border-accent/50 bg-accent/5 hover:bg-accent/10 rounded transition-all text-left"
-                          >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-sm font-medium">{rightPosition}</span>
-                                  <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
-                                    Tandem ({rightBreakers.filter(b => b.position_slot).length})
-                                  </span>
+                          <>
+                            {/* Base position - always visible, acts as toggle */}
+                            <button
+                              onClick={() => toggleTandem(rightPosition)}
+                              className="w-full p-3 border-2 border-accent/50 bg-accent/5 hover:bg-accent/10 rounded transition-all text-left"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-sm font-medium">{rightPosition}</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent-foreground">
+                                      Tandem ({tandemBreakers.length})
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground mt-0.5">
+                                    {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
+                                    {allRooms.size > 0 && ` • ${allRooms.size} ${allRooms.size === 1 ? 'room' : 'rooms'}`}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-muted-foreground mt-0.5">
-                                  {entityCount} {entityCount === 1 ? 'entity' : 'entities'}
-                                  {allRooms.size > 0 && ` • ${allRooms.size} ${allRooms.size === 1 ? 'room' : 'rooms'}`}
-                                </div>
+                                <svg className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
                               </div>
-                              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </div>
-                          </button>
+                            </button>
+
+                            {/* Tandem breakers - shown when expanded */}
+                            {isExpanded && tandemBreakers.map(breaker => (
+                              <div key={breaker.id} className="ml-4">
+                                <BreakerCard
+                                  breaker={breaker}
+                                  allBreakers={breakers}
+                                  rooms={breakerRooms.get(breaker.id)}
+                                  isHighlighted={highlightedBreakerIds.has(breaker.id)}
+                                  onClick={() => setSelectedBreaker(breaker)}
+                                  onPowerToggle={handlePowerToggle}
+                                />
+                              </div>
+                            ))}
+                          </>
                         )
                       }
 
-                      // Expanded or regular breaker view
-                      return rightBreakers
-                        .filter(breaker => !hasTandem || breaker.position_slot) // Skip base position in tandems
-                        .map(breaker => (
-                          <BreakerCard
-                            key={breaker.id}
-                            breaker={breaker}
-                            allBreakers={breakers}
-                            rooms={breakerRooms.get(breaker.id)}
-                            isHighlighted={highlightedBreakerIds.has(breaker.id)}
-                            onClick={() => setSelectedBreaker(breaker)}
-                            onPowerToggle={handlePowerToggle}
-                            showCollapse={hasTandem && isExpanded}
-                            onCollapse={() => toggleTandem(rightPosition)}
-                          />
-                        ))
+                      // Regular breaker view (no tandem)
+                      return rightBreakers.map(breaker => (
+                        <BreakerCard
+                          key={breaker.id}
+                          breaker={breaker}
+                          allBreakers={breakers}
+                          rooms={breakerRooms.get(breaker.id)}
+                          isHighlighted={highlightedBreakerIds.has(breaker.id)}
+                          onClick={() => setSelectedBreaker(breaker)}
+                          onPowerToggle={handlePowerToggle}
+                        />
+                      ))
                     })()
                   ) : (
                     <div className="p-3 border border-dashed border-muted rounded text-center text-sm text-muted-foreground">
