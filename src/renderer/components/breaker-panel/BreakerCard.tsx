@@ -34,7 +34,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
   return (
     <button
       onClick={onClick}
-      className={`w-full p-3 border rounded transition-all text-left ${
+      className={`w-full p-3 border-2 rounded transition-all text-left relative ${
         isHighlighted
           ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'
           : isSpare || isTandemBase || isPoweredOff
@@ -42,7 +42,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
           : hasEntities
           ? 'border-primary/50 bg-primary/5 hover:bg-primary/10'
           : 'border-yellow-500/40 bg-yellow-50/30 hover:bg-yellow-100/30 dark:bg-yellow-950/20 dark:hover:bg-yellow-950/30'
-      }`}
+      } ${breaker.position_slot ? 'border-l-4 border-l-accent' : ''}`}
     >
       <div className="flex items-center justify-between gap-2">
         {/* Position and label */}
@@ -89,7 +89,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
           </div>
           {rooms && rooms.length > 0 && (
             <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
-              {rooms.map((room, index) => (
+              {rooms.slice(0, 3).map((room) => (
                 <span
                   key={room}
                   className="px-1.5 py-0.5 rounded bg-muted text-foreground/80"
@@ -97,6 +97,11 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
                   {room}
                 </span>
               ))}
+              {rooms.length > 3 && (
+                <span className="px-1.5 py-0.5 rounded bg-muted text-foreground/60 font-medium">
+                  +{rooms.length - 3}
+                </span>
+              )}
             </div>
           )}
         </div>

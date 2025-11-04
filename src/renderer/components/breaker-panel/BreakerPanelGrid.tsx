@@ -187,19 +187,15 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                 <div className="space-y-1">
                   {leftBreakers.length > 0 ? (
                     leftBreakers.map(breaker => (
-                      <div
+                      <BreakerCard
                         key={breaker.id}
-                        className={breaker.position_slot ? 'ml-4' : ''}
-                      >
-                        <BreakerCard
-                          breaker={breaker}
-                          allBreakers={breakers}
-                          rooms={breakerRooms.get(breaker.id)}
-                          isHighlighted={highlightedBreakerIds.has(breaker.id)}
-                          onClick={() => setSelectedBreaker(breaker)}
-                          onPowerToggle={handlePowerToggle}
-                        />
-                      </div>
+                        breaker={breaker}
+                        allBreakers={breakers}
+                        rooms={breakerRooms.get(breaker.id)}
+                        isHighlighted={highlightedBreakerIds.has(breaker.id)}
+                        onClick={() => setSelectedBreaker(breaker)}
+                        onPowerToggle={handlePowerToggle}
+                      />
                     ))
                   ) : (
                     <div className="p-3 border border-dashed border-muted rounded text-center text-sm text-muted-foreground">
@@ -212,19 +208,15 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
                 <div className="space-y-1">
                   {rightBreakers.length > 0 ? (
                     rightBreakers.map(breaker => (
-                      <div
+                      <BreakerCard
                         key={breaker.id}
-                        className={breaker.position_slot ? 'ml-4' : ''}
-                      >
-                        <BreakerCard
-                          breaker={breaker}
-                          allBreakers={breakers}
-                          rooms={breakerRooms.get(breaker.id)}
-                          isHighlighted={highlightedBreakerIds.has(breaker.id)}
-                          onClick={() => setSelectedBreaker(breaker)}
-                          onPowerToggle={handlePowerToggle}
-                        />
-                      </div>
+                        breaker={breaker}
+                        allBreakers={breakers}
+                        rooms={breakerRooms.get(breaker.id)}
+                        isHighlighted={highlightedBreakerIds.has(breaker.id)}
+                        onClick={() => setSelectedBreaker(breaker)}
+                        onPowerToggle={handlePowerToggle}
+                      />
                     ))
                   ) : (
                     <div className="p-3 border border-dashed border-muted rounded text-center text-sm text-muted-foreground">
