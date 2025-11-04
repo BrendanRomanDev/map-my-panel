@@ -35,8 +35,6 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
   return (
     <button
       onClick={onClick}
-      onMouseEnter={() => onHover?.(breaker.id)}
-      onMouseLeave={() => onHover?.(null)}
       className={`w-full p-3 border-2 rounded transition-all text-left ${
         isHighlighted
           ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'
@@ -66,7 +64,17 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
               </span>
             )}
             {linkedBreaker && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1">
+              <span
+                className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1 cursor-pointer hover:bg-accent/80 transition-colors"
+                onMouseEnter={(e) => {
+                  e.stopPropagation()
+                  onHover?.(breaker.id)
+                }}
+                onMouseLeave={(e) => {
+                  e.stopPropagation()
+                  onHover?.(null)
+                }}
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="10"
