@@ -67,7 +67,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
             )}
             {linkedBreaker && (
               <span
-                className="text-xs px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-200 inline-flex items-center gap-1"
+                className="text-xs px-1.5 py-0.5 rounded bg-accent text-accent-foreground inline-flex items-center gap-1"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
