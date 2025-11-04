@@ -34,16 +34,14 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
   return (
     <button
       onClick={onClick}
-      className={`w-full p-3 border rounded transition-colors text-left ${
+      className={`w-full p-3 border rounded transition-all text-left ${
         isHighlighted
-          ? 'border-accent bg-accent/20 ring-2 ring-accent/40 shadow-lg'
-          : isSpare || isTandemBase
-          ? 'border-muted bg-muted/30 hover:bg-muted/50'
-          : isPoweredOff
-          ? 'border-orange-500/50 bg-orange-50/50 hover:bg-orange-100/50 dark:bg-orange-950/30 dark:hover:bg-orange-950/50'
+          ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'
+          : isSpare || isTandemBase || isPoweredOff
+          ? 'border-muted/50 bg-muted/10 hover:bg-muted/20 opacity-60'
           : hasEntities
           ? 'border-primary/50 bg-primary/5 hover:bg-primary/10'
-          : 'border-border bg-background hover:bg-muted/30'
+          : 'border-yellow-500/40 bg-yellow-50/30 hover:bg-yellow-100/30 dark:bg-yellow-950/20 dark:hover:bg-yellow-950/30'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
@@ -60,7 +58,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
               <span className="text-sm truncate">{breaker.label}</span>
             )}
             {isPoweredOff && !isSpare && !isTandemBase && (
-              <span className="text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-700 dark:text-orange-300">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                 OFF
               </span>
             )}
@@ -123,10 +121,8 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
           )}
 
           {/* Status indicator */}
-          {isSpare || isTandemBase ? (
+          {isSpare || isTandemBase || isPoweredOff ? (
             <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
-          ) : isPoweredOff ? (
-            <div className="w-2 h-2 rounded-full bg-orange-500" />
           ) : hasEntities ? (
             <div className="w-2 h-2 rounded-full bg-primary" />
           ) : (
