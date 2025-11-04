@@ -28,6 +28,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
   const [grouping, setGrouping] = useState<GroupingType>('room')
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all')
   const [roomFilter, setRoomFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState<string>('')
   const [showSettings, setShowSettings] = useState(false)
   const [showAddEntityModal, setShowAddEntityModal] = useState(false)
   const [showAddPanelModal, setShowAddPanelModal] = useState(false)
@@ -304,10 +305,41 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
                 </div>
               </div>
 
+              {/* Search input */}
+              <div className="px-4 pt-3 pb-2">
+                <div className="relative">
+                  <svg
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search entities..."
+                    className="w-full pl-9 pr-3 py-2 border border-border rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+
               {/* Content area */}
               <div className="flex-1 overflow-auto p-4">
-                {grouping === 'room' && <ByRoomView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} />}
-                {grouping === 'breaker' && <ByBreakerView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} />}
+                {grouping === 'room' && <ByRoomView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} />}
+                {grouping === 'breaker' && <ByBreakerView panelId={panel.id} typeFilter={entityTypeFilter} roomFilter={roomFilter} searchQuery={searchQuery} />}
               </div>
 
               {/* Sticky Add Entity Button */}

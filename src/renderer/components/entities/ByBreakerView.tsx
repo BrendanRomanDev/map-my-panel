@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useBreakers } from '../../hooks/useBreakers'
 import { useEntities } from '../../hooks/useEntities'
 import { EntityCard } from './EntityCard'
@@ -9,9 +9,10 @@ interface ByBreakerViewProps {
   panelId: string
   typeFilter?: string
   roomFilter?: string
+  searchQuery?: string
 }
 
-export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all' }: ByBreakerViewProps) {
+export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all', searchQuery = '' }: ByBreakerViewProps) {
   const { data: breakers, isLoading: breakersLoading, error: breakersError } = useBreakers(panelId)
   const { data: allEntities, isLoading: entitiesLoading, error: entitiesError } = useEntities(panelId)
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
@@ -20,11 +21,48 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all' 
   const isLoading = breakersLoading || entitiesLoading
   const error = breakersError || entitiesError
 
-  // Filter entities by type and room
-  const entities = allEntities?.filter(entity =>
-    (typeFilter === 'all' || entity.entity_type === typeFilter) &&
-    (roomFilter === 'all' || entity.room === roomFilter)
-  )
+  // Helper function to calculate relevance score for search
+  const calculateRelevance = (entity: Entity, query: string): number => {
+    if (!query) return 0
+
+    const lowerQuery = query.toLowerCase()
+    let score = 0
+
+    // Priority 1: Name match (score 3)
+    if (entity.name.toLowerCase().includes(lowerQuery)) {
+      score += 3
+    }
+
+    // Priority 2: Room match (score 2)
+    if (entity.room && entity.room.toLowerCase().includes(lowerQuery)) {
+      score += 2
+    }
+
+    // Priority 3: Location/description match (score 1)
+    if (entity.location && entity.location.toLowerCase().includes(lowerQuery)) {
+      score += 1
+    }
+
+    return score
+  }
+
+  // Filter entities by type, room, and search query
+  const entities = useMemo(() => {
+    if (!allEntities) return []
+
+    return allEntities
+      .filter(entity =>
+        (typeFilter === 'all' || entity.entity_type === typeFilter) &&
+        (roomFilter === 'all' || entity.room === roomFilter)
+      )
+      .map(entity => ({
+        entity,
+        relevance: calculateRelevance(entity, searchQuery)
+      }))
+      .filter(({ relevance }) => !searchQuery || relevance > 0) // Only show matches when searching
+      .sort((a, b) => b.relevance - a.relevance) // Sort by relevance (highest first)
+      .map(({ entity }) => entity)
+  }, [allEntities, typeFilter, roomFilter, searchQuery])
 
   if (isLoading) {
     return (
@@ -86,6 +124,13 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all' 
   const expandAll = () => {
     setCollapsedSections(new Set())
   }
+
+  // Auto-expand all sections when searching
+  useEffect(() => {
+    if (searchQuery) {
+      setCollapsedSections(new Set())
+    }
+  }, [searchQuery])
 
   if (breakersWithEntities.length === 0 && unmappedEntities.length === 0) {
     return (

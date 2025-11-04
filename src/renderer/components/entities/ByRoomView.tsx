@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useEntitiesByRoom } from '../../hooks/useEntities'
 import { EntityCard } from './EntityCard'
 import { EntityEditModal } from './EntityEditModal'
@@ -8,22 +8,59 @@ interface ByRoomViewProps {
   panelId: string
   typeFilter?: string
   roomFilter?: string
+  searchQuery?: string
 }
 
-export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all' }: ByRoomViewProps) {
+export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all', searchQuery = '' }: ByRoomViewProps) {
   const { data: allEntitiesByRoom, isLoading, error } = useEntitiesByRoom(panelId)
   const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null)
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
 
-  // Filter entities by type and room, always include "Unassigned" group
-  const entitiesByRoom = allEntitiesByRoom
-    ?.filter(group => roomFilter === 'all' || group.room === roomFilter || (!group.room && roomFilter === 'all'))
-    ?.map(group => ({
-      room: group.room || 'Unassigned', // Label entities without a room as "Unassigned"
-      entities: group.entities.filter(entity =>
-        typeFilter === 'all' || entity.entity_type === typeFilter
-      )
-    })).filter(group => group.entities.length > 0)
+  // Helper function to calculate relevance score for search
+  const calculateRelevance = (entity: Entity, query: string): number => {
+    if (!query) return 0
+
+    const lowerQuery = query.toLowerCase()
+    let score = 0
+
+    // Priority 1: Name match (score 3)
+    if (entity.name.toLowerCase().includes(lowerQuery)) {
+      score += 3
+    }
+
+    // Priority 2: Room match (score 2)
+    if (entity.room && entity.room.toLowerCase().includes(lowerQuery)) {
+      score += 2
+    }
+
+    // Priority 3: Location/description match (score 1)
+    if (entity.location && entity.location.toLowerCase().includes(lowerQuery)) {
+      score += 1
+    }
+
+    return score
+  }
+
+  // Filter entities by type, room, and search query
+  const entitiesByRoom = useMemo(() => {
+    let groups = allEntitiesByRoom
+      ?.filter(group => roomFilter === 'all' || group.room === roomFilter || (!group.room && roomFilter === 'all'))
+      ?.map(group => ({
+        room: group.room || 'Unassigned', // Label entities without a room as "Unassigned"
+        entities: group.entities
+          .filter(entity => typeFilter === 'all' || entity.entity_type === typeFilter)
+          .map(entity => ({
+            entity,
+            relevance: calculateRelevance(entity, searchQuery)
+          }))
+          .filter(({ relevance }) => !searchQuery || relevance > 0) // Only show matches when searching
+          .sort((a, b) => b.relevance - a.relevance) // Sort by relevance (highest first)
+          .map(({ entity }) => entity)
+      }))
+      .filter(group => group.entities.length > 0)
+
+    return groups || []
+  }, [allEntitiesByRoom, typeFilter, roomFilter, searchQuery])
 
   // Get all section IDs for collapse/expand all
   const allSectionIds = useMemo(() =>
@@ -50,6 +87,13 @@ export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all' }: 
   const expandAll = () => {
     setCollapsedSections(new Set())
   }
+
+  // Auto-expand all sections when searching
+  useEffect(() => {
+    if (searchQuery) {
+      setCollapsedSections(new Set())
+    }
+  }, [searchQuery])
 
   if (isLoading) {
     return (
