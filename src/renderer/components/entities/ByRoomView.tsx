@@ -126,20 +126,26 @@ export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all', se
 
   return (
     <>
-      {/* Collapse/Expand toolbar */}
+      {/* Collapse/Expand toolbar - top right corner */}
       {entitiesByRoom && entitiesByRoom.length > 1 && (
-        <div className="flex gap-2 mb-3 px-1">
+        <div className="flex gap-1 mb-3 justify-end">
           <button
             onClick={expandAll}
-            className="text-xs px-2 py-1 rounded border border-border hover:bg-muted transition-colors"
+            className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Expand all sections"
           >
-            Expand All
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
           </button>
           <button
             onClick={collapseAll}
-            className="text-xs px-2 py-1 rounded border border-border hover:bg-muted transition-colors"
+            className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Collapse all sections"
           >
-            Collapse All
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+            </svg>
           </button>
         </div>
       )}
