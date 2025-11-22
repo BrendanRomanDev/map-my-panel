@@ -283,3 +283,4 @@ See commit `f993bfa` for full refactor example:
 - Use React state for UI state (IDs, UI toggles, form inputs)
 - Use React Query for server state (data from API/database)
 - Never copy server state into React state
+- before resetting db in the future for this project, please let mek now so i can back up my data and create a conversion process. i was actively using this application and now my data is gone!

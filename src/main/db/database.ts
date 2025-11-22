@@ -346,4 +346,123 @@ function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('006_multiple_breakers_per_entity')
     console.log('Migration 006_multiple_breakers_per_entity completed')
   }
+
+  // Migration 007: Add is_container flag for tandem breaker base positions
+  if (!appliedMigrations.includes('007_add_is_container')) {
+    console.log('Running migration: 007_add_is_container')
+
+    database.exec(`
+      -- Create new breakers table with is_container flag and nullable amperage/breaker_type
+      CREATE TABLE breakers_new (
+        id TEXT PRIMARY KEY,
+        panel_id TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        position_slot TEXT CHECK (position_slot IN ('a', 'b')),
+        breaker_type TEXT CHECK (breaker_type IN ('single-pole', 'double-pole')),
+        amperage INTEGER CHECK (amperage > 0 OR amperage IS NULL),
+        label TEXT,
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'spare')),
+        linked_breaker_id TEXT,
+        is_powered INTEGER DEFAULT 1 CHECK (is_powered IN (0, 1)),
+        is_container INTEGER DEFAULT 0 CHECK (is_container IN (0, 1)),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (panel_id) REFERENCES panels(id) ON DELETE CASCADE,
+        FOREIGN KEY (linked_breaker_id) REFERENCES breakers(id) ON DELETE SET NULL,
+        UNIQUE (panel_id, position, position_slot),
+        CHECK (label IS NULL OR length(label) <= 20),
+        -- Container breakers can have NULL amperage/type, but regular breakers must have them
+        CHECK (
+          (is_container = 1 AND amperage IS NULL AND breaker_type IS NULL) OR
+          (is_container = 0 AND amperage IS NOT NULL AND breaker_type IS NOT NULL)
+        )
+      );
+
+      -- Copy data from old table and identify containers
+      -- For containers, set amperage and breaker_type to NULL immediately
+      INSERT INTO breakers_new (id, panel_id, position, position_slot, breaker_type, amperage, label, status, linked_breaker_id, is_powered, is_container, created_at, updated_at)
+      SELECT
+        b.id,
+        b.panel_id,
+        b.position,
+        b.position_slot,
+        -- Set breaker_type to NULL for containers
+        CASE
+          WHEN b.position_slot IS NULL AND EXISTS (
+            SELECT 1 FROM breakers b2
+            WHERE b2.panel_id = b.panel_id
+            AND b2.position = b.position
+            AND b2.position_slot IS NOT NULL
+          ) THEN NULL
+          ELSE b.breaker_type
+        END,
+        -- Set amperage to NULL for containers
+        CASE
+          WHEN b.position_slot IS NULL AND EXISTS (
+            SELECT 1 FROM breakers b2
+            WHERE b2.panel_id = b.panel_id
+            AND b2.position = b.position
+            AND b2.position_slot IS NOT NULL
+          ) THEN NULL
+          ELSE b.amperage
+        END,
+        b.label,
+        b.status,
+        b.linked_breaker_id,
+        b.is_powered,
+        -- Mark as container if position_slot IS NULL AND other breakers exist at same position with slots
+        CASE
+          WHEN b.position_slot IS NULL AND EXISTS (
+            SELECT 1 FROM breakers b2
+            WHERE b2.panel_id = b.panel_id
+            AND b2.position = b.position
+            AND b2.position_slot IS NOT NULL
+          ) THEN 1
+          ELSE 0
+        END,
+        b.created_at,
+        b.updated_at
+      FROM breakers b;
+
+      -- Drop old table and rename new one
+      DROP TABLE breakers;
+      ALTER TABLE breakers_new RENAME TO breakers;
+
+      -- Recreate indexes
+      CREATE INDEX idx_breakers_panel_id ON breakers(panel_id);
+      CREATE INDEX idx_breakers_linked ON breakers(linked_breaker_id) WHERE linked_breaker_id IS NOT NULL;
+      CREATE INDEX idx_breakers_containers ON breakers(panel_id, position) WHERE is_container = 1;
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('007_add_is_container')
+    console.log('Migration 007_add_is_container completed')
+  }
+
+  // Migration 008: Fix existing tandem base positions that should be containers
+  if (!appliedMigrations.includes('008_fix_existing_tandem_containers')) {
+    console.log('Running migration: 008_fix_existing_tandem_containers')
+
+    database.exec(`
+      -- Find all base positions that have tandem children but aren't marked as containers
+      -- and convert them to containers
+      UPDATE breakers
+      SET
+        is_container = 1,
+        amperage = NULL,
+        breaker_type = NULL,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE
+        position_slot IS NULL
+        AND is_container = 0
+        AND EXISTS (
+          SELECT 1 FROM breakers b2
+          WHERE b2.panel_id = breakers.panel_id
+          AND b2.position = breakers.position
+          AND b2.position_slot IS NOT NULL
+        );
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('008_fix_existing_tandem_containers')
+    console.log('Migration 008_fix_existing_tandem_containers completed')
+  }
 }

@@ -92,19 +92,9 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
   }
 
   // Group entities by breaker, including unmapped
-  // Filter out base positions for tandem breakers (they're just containers)
+  // Filter out container positions (they're just holders for tandem breakers)
   const breakersWithEntities = breakers
-    .filter(breaker => {
-      // Skip base positions that have tandem breakers
-      if (!breaker.position_slot) {
-        // Check if there are other breakers at same position with slots
-        const hasTandemSlots = breakers.some(
-          b => b.position === breaker.position && b.position_slot
-        )
-        if (hasTandemSlots) return false
-      }
-      return true
-    })
+    .filter(breaker => !breaker.is_container) // Skip container positions
     .map(breaker => ({
       breaker,
       entities: entities.filter(e => e.breaker_ids.includes(breaker.id))

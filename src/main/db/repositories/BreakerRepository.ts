@@ -13,8 +13,8 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
     const now = new Date().toISOString()
 
     const stmt = this.db.prepare(`
-      INSERT INTO breakers (id, panel_id, position, position_slot, breaker_type, amperage, label, status, is_powered, linked_breaker_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO breakers (id, panel_id, position, position_slot, breaker_type, amperage, label, status, is_powered, is_container, linked_breaker_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     stmt.run(
@@ -22,11 +22,12 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
       input.panel_id,
       input.position,
       input.position_slot || null,
-      input.breaker_type,
-      input.amperage,
+      input.breaker_type || null,
+      input.amperage || null,
       input.label || null,
       input.status || 'active',
       input.is_powered !== undefined ? (input.is_powered ? 1 : 0) : 1,
+      input.is_container !== undefined ? (input.is_container ? 1 : 0) : 0,
       input.linked_breaker_id || null,
       now,
       now
@@ -37,8 +38,8 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
 
   createBatch(inputs: CreateBreakerInput[]): Breaker[] {
     const insert = this.db.prepare(`
-      INSERT INTO breakers (id, panel_id, position, position_slot, breaker_type, amperage, label, status, is_powered, linked_breaker_id, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO breakers (id, panel_id, position, position_slot, breaker_type, amperage, label, status, is_powered, is_container, linked_breaker_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     const insertMany = this.db.transaction((inputs: CreateBreakerInput[]) => {
@@ -52,11 +53,12 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
           input.panel_id,
           input.position,
           input.position_slot || null,
-          input.breaker_type,
-          input.amperage,
+          input.breaker_type || null,
+          input.amperage || null,
           input.label || null,
           input.status || 'active',
           input.is_powered !== undefined ? (input.is_powered ? 1 : 0) : 1,
+          input.is_container !== undefined ? (input.is_container ? 1 : 0) : 0,
           input.linked_breaker_id || null,
           now,
           now
@@ -146,6 +148,11 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
       values.push(input.is_powered ? 1 : 0)
     }
 
+    if (input.is_container !== undefined) {
+      updates.push('is_container = ?')
+      values.push(input.is_container ? 1 : 0)
+    }
+
     if (input.linked_breaker_id !== undefined) {
       updates.push('linked_breaker_id = ?')
       values.push(input.linked_breaker_id)
@@ -226,7 +233,8 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
   private mapRowToBreaker(row: any): Breaker {
     return {
       ...this.mapTimestamps(row),
-      is_powered: Boolean(row.is_powered)
+      is_powered: Boolean(row.is_powered),
+      is_container: Boolean(row.is_container)
     } as Breaker
   }
 }

@@ -207,6 +207,16 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         return
       }
 
+      // If this is the first tandem breaker being added (no existing slots),
+      // convert the base breaker to a container
+      if (existingSlots.length === 0) {
+        await window.electronAPI.breakers.update(breaker.id, {
+          is_container: true,
+          amperage: null,
+          breaker_type: null
+        })
+      }
+
       await window.electronAPI.breakers.create({
         panel_id: panelId,
         position: breaker.position,
@@ -334,6 +344,42 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         }
       }
 
+      // Check if this is the last tandem breaker at this position
+      // If so, convert the base breaker back to a regular breaker
+      if (breaker.position_slot) {
+        const otherTandemsAtPosition = allBreakers?.filter(
+          b => b.position === breaker.position &&
+               b.position_slot &&
+               b.id !== breaker.id
+        ) || []
+
+        // If this is the last tandem breaker, convert base breaker back to regular
+        if (otherTandemsAtPosition.length === 0) {
+          const baseBreaker = allBreakers?.find(
+            b => b.position === breaker.position && !b.position_slot
+          )
+
+          if (baseBreaker) {
+            // Unmap any entities from the base breaker
+            const baseBreakerEntities = entities?.filter(e =>
+              e.breaker_ids.includes(baseBreaker.id)
+            ) || []
+
+            for (const entity of baseBreakerEntities) {
+              const newBreakerIds = entity.breaker_ids.filter(id => id !== baseBreaker.id)
+              await window.electronAPI.entities.update(entity.id, { breaker_ids: newBreakerIds })
+            }
+
+            // Convert base breaker back to regular breaker
+            await window.electronAPI.breakers.update(baseBreaker.id, {
+              is_container: false,
+              amperage: 15,
+              breaker_type: 'single-pole'
+            })
+          }
+        }
+      }
+
       // Delete the breaker
       await window.electronAPI.breakers.delete(breaker.id)
 
@@ -420,110 +466,115 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
             </p>
           </div>
 
-          {/* Amperage */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Amperage
-            </label>
-            <select
-              value={amperage}
-              onChange={e => setAmperage(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-input rounded-md bg-background"
-            >
-              <option value={15}>15A</option>
-              <option value={20}>20A</option>
-              <option value={30}>30A</option>
-              <option value={40}>40A</option>
-              <option value={50}>50A</option>
-              <option value={60}>60A</option>
-            </select>
-          </div>
-
-          {/* Breaker Type */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Breaker Type
-            </label>
-            <select
-              value={breakerType}
-              onChange={e => {
-                const newType = e.target.value as 'single-pole' | 'double-pole'
-                const oldType = breakerType
-                setBreakerType(newType)
-                // If changing from double-pole to single-pole, optimistically clear entities and links
-                if (oldType === 'double-pole' && newType === 'single-pole') {
-                  setLinkedBreakerId(null)
-                  setAssignedEntityIds(new Set()) // Clear all assigned entities
-                }
-              }}
-              className="w-full px-3 py-2 border border-input rounded-md bg-background"
-            >
-              <option value="single-pole">Single-Pole (120V)</option>
-              <option value="double-pole">Double-Pole (240V)</option>
-            </select>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Status
-            </label>
-            <select
-              value={status}
-              onChange={e => setStatus(e.target.value as 'active' | 'spare')}
-              className="w-full px-3 py-2 border border-input rounded-md bg-background"
-            >
-              <option value="active">Active</option>
-              <option value="spare">Spare</option>
-            </select>
-          </div>
-
-          {/* Power State */}
-          <div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isPowered}
-                onChange={e => setIsPowered(e.target.checked)}
-                className="w-4 h-4"
-              />
+          {/* Hide technical fields for container breakers */}
+          {!breaker.is_container && (
+            <>
+              {/* Amperage */}
               <div>
-                <div className="text-sm font-medium">Breaker is powered ON</div>
-                <div className="text-xs text-muted-foreground">
-                  Is the breaker switch physically turned on?
-                </div>
+                <label className="block text-sm font-medium mb-1">
+                  Amperage
+                </label>
+                <select
+                  value={amperage}
+                  onChange={e => setAmperage(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                >
+                  <option value={15}>15A</option>
+                  <option value={20}>20A</option>
+                  <option value={30}>30A</option>
+                  <option value={40}>40A</option>
+                  <option value={50}>50A</option>
+                  <option value={60}>60A</option>
+                </select>
               </div>
-            </label>
-          </div>
 
-          {/* Linked Breaker (for double-pole) */}
-          {breakerType === 'double-pole' && (
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Link to Breaker (240V pair)
-              </label>
-              <select
-                value={linkedBreakerId || ''}
-                onChange={e => handleLinkedBreakerChange(e.target.value)}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background"
-              >
-                <option value="">Not linked</option>
-                {availableBreakersForLinking.map(b => (
-                  <option key={b.id} value={b.id}>
-                    Position {b.position}
-                    {b.position_slot && b.position_slot}
-                    {b.label && ` - ${b.label}`}
-                    {b.breaker_type === 'single-pole' && ' (Single-Pole)'}
-                  </option>
-                ))}
-              </select>
-              {linkedBreaker && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Linked to position {linkedBreaker.position}
-                  {linkedBreaker.position_slot}
-                </p>
+              {/* Breaker Type */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Breaker Type
+                </label>
+                <select
+                  value={breakerType}
+                  onChange={e => {
+                    const newType = e.target.value as 'single-pole' | 'double-pole'
+                    const oldType = breakerType
+                    setBreakerType(newType)
+                    // If changing from double-pole to single-pole, optimistically clear entities and links
+                    if (oldType === 'double-pole' && newType === 'single-pole') {
+                      setLinkedBreakerId(null)
+                      setAssignedEntityIds(new Set()) // Clear all assigned entities
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                >
+                  <option value="single-pole">Single-Pole (120V)</option>
+                  <option value="double-pole">Double-Pole (240V)</option>
+                </select>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Status
+                </label>
+                <select
+                  value={status}
+                  onChange={e => setStatus(e.target.value as 'active' | 'spare')}
+                  className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                >
+                  <option value="active">Active</option>
+                  <option value="spare">Spare</option>
+                </select>
+              </div>
+
+              {/* Power State */}
+              <div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isPowered}
+                    onChange={e => setIsPowered(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  <div>
+                    <div className="text-sm font-medium">Breaker is powered ON</div>
+                    <div className="text-xs text-muted-foreground">
+                      Is the breaker switch physically turned on?
+                    </div>
+                  </div>
+                </label>
+              </div>
+
+              {/* Linked Breaker (for double-pole) */}
+              {breakerType === 'double-pole' && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Link to Breaker (240V pair)
+                  </label>
+                  <select
+                    value={linkedBreakerId || ''}
+                    onChange={e => handleLinkedBreakerChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-input rounded-md bg-background"
+                  >
+                    <option value="">Not linked</option>
+                    {availableBreakersForLinking.map(b => (
+                      <option key={b.id} value={b.id}>
+                        Position {b.position}
+                        {b.position_slot && b.position_slot}
+                        {b.label && ` - ${b.label}`}
+                        {b.breaker_type === 'single-pole' && ' (Single-Pole)'}
+                      </option>
+                    ))}
+                  </select>
+                  {linkedBreaker && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Linked to position {linkedBreaker.position}
+                      {linkedBreaker.position_slot}
+                    </p>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
         </div>
 
@@ -560,19 +611,20 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
           )}
         </div>
 
-        {/* Assigned Entities */}
-        <div className="pt-4 border-t border-border">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-medium">
-              Assigned Entities ({assignedEntityIds.size})
-            </h3>
-            <button
-              onClick={() => setIsAssignModalOpen(true)}
-              className="px-3 py-1 text-sm border border-border rounded-md hover:bg-muted"
-            >
-              + Assign
-            </button>
-          </div>
+        {/* Assigned Entities - hide for containers */}
+        {!breaker.is_container && (
+          <div className="pt-4 border-t border-border">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-medium">
+                Assigned Entities ({assignedEntityIds.size})
+              </h3>
+              <button
+                onClick={() => setIsAssignModalOpen(true)}
+                className="px-3 py-1 text-sm border border-border rounded-md hover:bg-muted"
+              >
+                + Assign
+              </button>
+            </div>
           {allEntities && allEntities.filter(e => assignedEntityIds.has(e.id)).length > 0 ? (
             <div className="space-y-2">
               {allEntities.filter(e => assignedEntityIds.has(e.id)).map(entity => (
@@ -602,7 +654,8 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
               No entities assigned yet
             </div>
           )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Sticky Footer with Actions */}

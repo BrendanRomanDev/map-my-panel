@@ -11,23 +11,39 @@ interface BreakerCardProps {
 }
 
 export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false, onClick, onPowerToggle, onHover }: BreakerCardProps) {
-  const isSpare = breaker.status === 'spare'
+  const isContainer = breaker.is_container
+
+  // For containers, derive status and power from children
+  // Status: ANY child active → active; ALL spare → spare
+  // Power: ANY child powered → powered; ALL off → off
+  let effectiveStatus = breaker.status
+  let effectiveIsPowered = breaker.is_powered
+
+  if (isContainer && allBreakers) {
+    const children = allBreakers.filter(
+      b => b.position === breaker.position && b.position_slot !== null
+    )
+
+    if (children.length > 0) {
+      // Derive status: if ANY child is active, container is active
+      effectiveStatus = children.some(c => c.status === 'active') ? 'active' : 'spare'
+      // Derive power: if ANY child is powered on, container is powered on
+      effectiveIsPowered = children.some(c => c.is_powered)
+    }
+  }
+
+  const isSpare = effectiveStatus === 'spare'
   const hasEntities = breaker.entity_count > 0
-  const isPoweredOff = !breaker.is_powered
+  const isPoweredOff = !effectiveIsPowered
 
   // Find linked breaker if this breaker is linked
   const linkedBreaker = breaker.linked_breaker_id && allBreakers
     ? allBreakers.find(b => b.id === breaker.linked_breaker_id)
     : null
 
-  // Check if this is a tandem base position (no slot, but other breakers with same position have slots)
-  const isTandemBase = !breaker.position_slot && allBreakers
-    ? allBreakers.some(b => b.position === breaker.position && b.position_slot)
-    : false
-
   const handlePowerToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (onPowerToggle && !isSpare && !isTandemBase) {
+    if (onPowerToggle && !isSpare && !isContainer) {
       onPowerToggle(breaker.id, !breaker.is_powered)
     }
   }
@@ -40,7 +56,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
       className={`w-full p-3 border-2 rounded transition-all text-left ${
         isHighlighted
           ? 'border-primary bg-primary/30 ring-4 ring-primary/50 shadow-xl scale-[1.02]'
-          : isSpare || isTandemBase || isPoweredOff
+          : isSpare || isContainer || isPoweredOff
           ? 'border-muted/50 bg-muted/10 hover:bg-muted/20 opacity-60'
           : hasEntities
           ? 'border-primary/50 bg-primary/5 hover:bg-primary/10'
@@ -60,7 +76,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
             {breaker.label && (
               <span className="text-sm truncate">{breaker.label}</span>
             )}
-            {isPoweredOff && !isSpare && !isTandemBase && (
+            {isPoweredOff && !isSpare && !isContainer && (
               <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                 OFF
               </span>
@@ -88,9 +104,13 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
             )}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">
-            {breaker.amperage}A •{' '}
-            {breaker.breaker_type === 'single-pole' ? 'SP' : 'DP'}
-            {hasEntities && ` • ${breaker.entity_count} ${breaker.entity_count === 1 ? 'entity' : 'entities'}`}
+            {!isContainer && breaker.amperage && breaker.breaker_type && (
+              <>
+                {breaker.amperage}A •{' '}
+                {breaker.breaker_type === 'single-pole' ? 'SP' : 'DP'}
+              </>
+            )}
+            {hasEntities && (isContainer || breaker.amperage ? ' • ' : '')}{hasEntities && `${breaker.entity_count} ${breaker.entity_count === 1 ? 'entity' : 'entities'}`}
           </div>
           {rooms && rooms.length > 0 && (
             <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-1">
@@ -113,8 +133,8 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
 
         {/* Power toggle and status indicator */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Power toggle switch (only for actual breakers, not spare or tandem base positions) */}
-          {!isSpare && !isTandemBase && (
+          {/* Power toggle switch (only for actual breakers, not spare or container positions) */}
+          {!isSpare && !isContainer && (
             <button
               onClick={handlePowerToggle}
               className={`relative w-10 h-5 rounded-full transition-colors ${
@@ -131,7 +151,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
           )}
 
           {/* Status indicator */}
-          {isSpare || isTandemBase || isPoweredOff ? (
+          {isSpare || isContainer || isPoweredOff ? (
             <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
           ) : hasEntities ? (
             <div className="w-2 h-2 rounded-full bg-primary" />

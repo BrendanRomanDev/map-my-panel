@@ -24,11 +24,12 @@ export interface Breaker {
   panel_id: string
   position: number  // Physical row number (1-50)
   position_slot: 'a' | 'b' | null  // For tandem breakers (19a, 19b), null for regular single breakers
-  breaker_type: 'single-pole' | 'double-pole'
-  amperage: number
+  breaker_type: 'single-pole' | 'double-pole' | null  // NULL for container breakers
+  amperage: number | null  // NULL for container breakers (specs belong to child breakers)
   label: string | null  // Optional user-defined label (max 20 chars)
   status: 'active' | 'spare'  // Is circuit installed/wired?
   is_powered: boolean  // Is the breaker switch physically ON?
+  is_container: boolean  // True for tandem base positions that hold child breakers
   linked_breaker_id: string | null  // For double-pole breakers that span two positions
   created_at: Date
   updated_at: Date
@@ -63,11 +64,12 @@ export interface CreateBreakerInput {
   panel_id: string
   position: number
   position_slot?: 'a' | 'b' | null
-  breaker_type: 'single-pole' | 'double-pole'
-  amperage: number
+  breaker_type?: 'single-pole' | 'double-pole' | null  // NULL for containers
+  amperage?: number | null  // NULL for containers
   label?: string | null
   status?: 'active' | 'spare'
   is_powered?: boolean
+  is_container?: boolean
   linked_breaker_id?: string | null
 }
 
@@ -94,11 +96,12 @@ export interface UpdatePanelInput {
 
 export interface UpdateBreakerInput {
   position_slot?: 'a' | 'b' | null
-  breaker_type?: 'single-pole' | 'double-pole'
-  amperage?: number
+  breaker_type?: 'single-pole' | 'double-pole' | null
+  amperage?: number | null
   label?: string | null
   status?: 'active' | 'spare'
   is_powered?: boolean
+  is_container?: boolean
   linked_breaker_id?: string | null
 }
 
