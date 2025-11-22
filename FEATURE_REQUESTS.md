@@ -4,7 +4,66 @@ This document tracks feature requests and enhancement ideas for Map My Panel.
 
 ---
 
-## 1. Bidirectional Breaker Linking
+## 1. Entity Condition Tags & Work History
+
+**Priority**: High
+**Status**: Next Up
+
+### Problem
+There's no way to track important electrical conditions or maintenance history for entities. Real-world scenarios that need tracking:
+
+1. **Grounding status**: Old 2-prong outlets replaced with self-grounding outlets need documentation that the circuit has no ground wire (even though a tester shows "no open ground" due to the self-grounding mechanism)
+2. **Reverse polarity**: Outlets wired with hot/neutral reversed that can't be fixed immediately
+3. **Work history**: When was an outlet last replaced or worked on?
+
+Without this, you might forget in a year that position 19B has no ground wire in the circuit, even though the outlets test as grounded.
+
+### Proposed Solution
+
+#### Part A: Entity Tags/Conditions
+A flexible tagging system for entities to track conditions:
+- **"No Ground Wire"** - Circuit lacks ground conductor
+- **"Grounded to Box"** - Self-grounding outlet, ground via metal box/conduit
+- **"Reverse Polarity"** - Needs fixing
+- **"GFCI Protected"** - Downstream of GFCI outlet
+- Custom user-defined tags
+
+#### Part B: Work History Log
+Each entity can have an optional history/log:
+- Date of last work
+- What was done ("Replaced 2-prong with self-grounding outlet")
+- Optional notes
+
+### Technical Questions to Resolve
+
+**Should grounding be tracked at breaker level or entity level?**
+
+From electrical perspective:
+- Ground wires are typically run per-circuit, so "no ground wire" would apply to entire breaker
+- BUT self-grounding outlets in metal boxes CAN provide ground even without circuit ground wire
+- Reverse polarity is definitely per-outlet (wiring error at that specific outlet)
+
+**Recommendation**: Track at BOTH levels:
+- Breaker: `has_ground_wire: boolean` - Does the circuit have a ground conductor?
+- Entity: Tags for conditions like "grounded to box", "reverse polarity", etc.
+
+This way, entities on a "no ground wire" circuit could inherit a visual indicator, but individual entities can override/clarify their specific situation.
+
+### UI/UX Ideas
+- Tags shown as colored badges on entity cards
+- Breaker detail panel shows "No Ground Wire" warning that propagates to child entities
+- Work history as expandable section on entity detail
+- Filter entities by tag (e.g., "show all reverse polarity outlets")
+
+### Database Changes
+- New table: `entity_tags` (entity_id, tag_name, created_at)
+- New table: `entity_work_log` (entity_id, work_date, description, notes, created_at)
+- New column on breakers: `has_ground_wire` (boolean, default true)
+- Or: Predefined tags table with colors/icons
+
+---
+
+## 2. Bidirectional Breaker Linking (was #1)
 
 **Priority**: Medium
 **Status**: Pending
@@ -30,7 +89,7 @@ Currently, when linking breakers (e.g., for tandem breakers or multi-pole breake
 
 ---
 
-## 2. Self-Labeling Breakers (Label-Only Breakers)
+## 3. Self-Labeling Breakers (Label-Only Breakers)
 
 **Priority**: Medium
 **Status**: Pending
@@ -67,7 +126,7 @@ Add a "self-labeling" or "label-only" mode for breakers where:
 
 ---
 
-## 3. Circuit Flow Mapping (Entity Flow Diagram)
+## 4. Circuit Flow Mapping (Entity Flow Diagram)
 
 **Priority**: Low
 **Status**: Planned for Future
@@ -103,7 +162,7 @@ Create a new "Circuit Map" tab with drag-and-drop functionality:
 
 ---
 
-## 4. Floor Plan Drawing Tool
+## 5. Floor Plan Drawing Tool
 
 **Priority**: Low
 **Status**: Planned for Future (Long-term)
@@ -149,4 +208,4 @@ If pursued, start with **Option B (Image Upload + Pinning)** for fastest time-to
 
 ---
 
-**Last Updated**: 2025-11-03 (Added themes and mapping features)
+**Last Updated**: 2025-11-22 (Added Entity Condition Tags & Work History as priority #1)
