@@ -89,40 +89,73 @@ Currently, when linking breakers (e.g., for tandem breakers or multi-pole breake
 
 ---
 
-## 3. Self-Labeling Breakers (Label-Only Breakers)
+## 3. Quick-Create Entity from Breaker Label
 
-**Priority**: Medium
+**Priority**: Low
 **Status**: Pending
 
 ### Problem
-Some breakers are descriptive enough with just their label and don't require individual entities to be created. Examples include:
-- "Kitchen Outlets" - covers all kitchen outlets as a group
-- "Generator" - single-purpose breaker
-- "Garage Lights" - all garage lights on one breaker
+For simple single-device circuits (Range, Generator, HVAC, Well Pump), the setup workflow feels redundant:
 
-Currently, breakers without entities show as incomplete or "missing entities," but in these cases, the breaker label itself is the complete description.
+**Current Workflow:**
+1. Edit breaker → Set label to "Range"
+2. Configure breaker type (e.g., double-pole, 40A)
+3. Create new entity → Name: "Range", Type: Appliance
+4. Assign entity to breaker → Select "Range" breaker
+
+**The Issue:** You're entering "Range" twice - once for the breaker label, once for the entity name. The entity creation feels like busywork when the breaker label already captures everything.
+
+### Real-World Example
+- **Breaker 5-7 (Double-pole):** "Range" - only the kitchen range is on this circuit
+- **Breaker 9:** "Generator" - only the generator transfer switch
+- **Breaker 11:** "Well Pump" - single device
+
+For these simple circuits, the breaker label and entity name are identical, making entity creation feel like redundant data entry.
 
 ### Proposed Solution
-Add a "self-labeling" or "label-only" mode for breakers where:
-- The breaker label is considered sufficient documentation
-- No entities need to be created
-- Breaker shows as active/complete (not as "missing entities" or spare)
-- Status indicator reflects that the breaker is properly documented
+Add a **"Quick-Create Entity from Breaker Label"** button in the Breaker Detail Panel:
+
+**UI Flow:**
+```
+Breaker 5-7 - "Range" (40A Double-Pole)
+Entities: (none)
+
+Actions:
+[⚡ Create "Range" Entity (ℹ️)]  ← Quick-create with tooltip
+[+ Create New Entity]            ← Manual form
+```
+
+**Button Behavior:**
+- Pre-fills entity name with breaker label ("Range")
+- Pre-assigns entity to current breaker
+- Opens entity form with name pre-filled, allowing user to:
+  - Add room (e.g., "Kitchen")
+  - Add location details if desired
+  - Change entity type (defaults to "Appliance" for quick-create)
+  - Save immediately or cancel
+
+**Tooltip Content (on ℹ️ icon hover/click):**
+> **Quick-Create Tip:** Use this for simple circuits where the breaker label describes the device (like "Range" or "Generator"). Creates an entity with the same name and assigns it to this breaker automatically.
 
 ### UI/UX Considerations
-- Add a checkbox or toggle: "Label-only breaker" or "Self-labeling"
-- When enabled:
-  - Entity list is hidden/disabled for that breaker
-  - Breaker shows as "active" with just the label
-  - No warnings about missing entities
-  - Visual indicator that it's a self-labeled breaker
-- Make it easy to convert back to regular breaker if user later wants to add entities
+- **Tooltip on info icon** explains when/why to use this feature
+- **Button only shows** when breaker has no entities assigned
+- **Pre-filled form** saves time but still allows customization before saving
+- **Not automatic** - user explicitly chooses when to use it (avoids unwanted entities)
+- **Consistent with existing patterns** - still uses entity creation form, just pre-filled
 
 ### Technical Considerations
-- Add a `is_self_labeled` or `label_only` boolean field to the Breaker model
-- Update breaker status logic to treat self-labeled breakers as complete
-- Update UI components to hide entity-related features for self-labeled breakers
-- Ensure filtering and search still work properly
+- No database schema changes needed (uses existing entity model)
+- Button visibility conditional: `breaker.entities.length === 0`
+- Pre-fill logic: `name = breaker.label`, `breaker_id = breaker.id`
+- Default entity type for quick-create: "Appliance" (user can change)
+- Form validation still applies (name required, etc.)
+
+### Alternative Considered
+**"Label-only" breakers (no entities required)** - Rejected because:
+- Prevents adding entity-specific data like condition tags and work history later
+- Creates inconsistent data model (some breakers have entities, some don't)
+- Quick-create achieves the same goal (reduced friction) while maintaining data consistency
 
 ---
 
@@ -198,6 +231,61 @@ If pursued, start with **Option B (Image Upload + Pinning)** for fastest time-to
 
 ---
 
+## 6. UX Consistency: Auto-Save on Double-Pole Linking
+
+**Priority**: Low (Polish)
+**Status**: Pending
+
+### Problem
+When editing a breaker in the Breaker Detail sidebar, there's inconsistent state management around when changes are persisted:
+
+**Current Behavior:**
+- **Simple edits** (amperage, label) wait for "Save" button to persist
+- **Double-pole linking** persists immediately (bypasses Save/Cancel buttons)
+
+**Specific Example:**
+1. Open Breaker 5 in sidebar
+2. Change amperage from 20A → 30A (not yet saved)
+3. Click "Link to Breaker 7" to create double-pole
+4. Modal appears: "This will convert Breaker 7 to double-pole. Continue?"
+5. Click "Yes" → **Double-pole link persists immediately to Breaker 7**
+6. Click "Cancel" in sidebar → Amperage change **discarded**, but double-pole link **remains**
+
+**The Issue:** Mixed mental model - some actions respect Save/Cancel, others bypass it.
+
+### Proposed Solution
+When confirming double-pole linking modal, **auto-save the current breaker's pending changes** as well:
+
+**New Flow:**
+1. Open Breaker 5 in sidebar
+2. Change amperage from 20A → 30A (pending)
+3. Click "Link to Breaker 7" to create double-pole
+4. Modal: "This will link Breaker 5 to Breaker 7 as double-pole and save all pending changes. Continue?"
+5. Click "Yes" → **Both breakers updated AND amperage change saved**
+6. Sidebar auto-closes or shows "Saved" state (Save/Cancel buttons no longer needed)
+
+**Why This Works:**
+- Eliminates the inconsistency - confirming modal saves everything
+- User gets clear warning that changes will persist
+- No orphaned "pending" state after complex operations
+- Cleaner UX - modal confirmation = full commit
+
+### Technical Considerations
+- On double-pole link confirmation, save current breaker's form state before persisting link
+- Apply all pending changes (amperage, label, type, etc.) together with link operation
+- Show success feedback: "Breaker 5 and Breaker 7 linked and saved"
+- Consider closing sidebar after successful save (or disable Save/Cancel buttons)
+
+### Alternative Considered
+**Just clarify modal text** - Add "This will save immediately" to modal. Simpler but still leaves inconsistency in place.
+
+### Notes
+- Identified during December 2024 review
+- Low priority - edge case that's mostly mitigated by modal confirmation
+- Consider revisiting if users report confusion in practice
+
+---
+
 ## Future Considerations
 
 - **Bulk Operations**: Add/edit/remove multiple entities at once
@@ -208,4 +296,6 @@ If pursued, start with **Option B (Image Upload + Pinning)** for fastest time-to
 
 ---
 
-**Last Updated**: 2025-11-22 (Added Entity Condition Tags & Work History as priority #1)
+**Last Updated**: 2025-12-13
+- Revised Feature Request #3: Changed from "Self-Labeling Breakers" to "Quick-Create Entity from Breaker Label" to better reflect actual user workflow and reduce data entry friction
+- Added Feature Request #6: UX Consistency - Auto-save on double-pole linking to eliminate mixed state management behavior
