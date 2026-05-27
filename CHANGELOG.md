@@ -21,11 +21,13 @@ First public release. The app is feature-complete for documenting residential el
 
 ### Distribution
 
-- macOS `.dmg` and Windows `.exe` installers attached to this release
-- App is unsigned for v0.1.0 — see README for how to bypass Gatekeeper / SmartScreen warnings on first launch
+- macOS `.dmg` installers attached to this release (separate arm64 and x64 builds)
+- Windows `.exe` installer planned for v0.1.1
+- App is unsigned for v0.1.x — see README for how to bypass Gatekeeper warnings on first launch
 
 ### Known limitations
 
+- macOS only for v0.1.0; Windows coming in v0.1.1
 - No cloud sync — moving data between machines is manual (export JSON → import JSON)
 - Installers are unsigned; signing is on the roadmap once usage justifies the cost
 - Linux build not yet provided
