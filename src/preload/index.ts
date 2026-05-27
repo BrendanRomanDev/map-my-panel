@@ -42,6 +42,9 @@ export interface ElectronAPI {
     export: () => Promise<{ success: boolean; message: string }>
     import: () => Promise<{ success: boolean; message: string }>
   }
+  seed: {
+    loadSample: () => Promise<{ success: boolean; message: string }>
+  }
   breakers: {
     create: (input: CreateBreakerInput) => Promise<Breaker>
     createBatch: (inputs: CreateBreakerInput[]) => Promise<Breaker[]>
@@ -125,6 +128,9 @@ const electronAPI: ElectronAPI = {
   backup: {
     export: () => ipcRenderer.invoke('backup:export'),
     import: () => ipcRenderer.invoke('backup:import')
+  },
+  seed: {
+    loadSample: () => ipcRenderer.invoke('seed:loadSample')
   }
 }
 

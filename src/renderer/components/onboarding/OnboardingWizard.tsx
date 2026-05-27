@@ -27,6 +27,7 @@ export type OnboardingData = {
 export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0) // Start at step 0 for choice screen
   const [isImporting, setIsImporting] = useState(false)
+  const [isLoadingSample, setIsLoadingSample] = useState(false)
   const [data, setData] = useState<OnboardingData>({
     propertyName: 'My Property',
     rooms: [],
@@ -79,6 +80,32 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
     }
   }
 
+  const handleLoadSample = async () => {
+    setIsLoadingSample(true)
+    try {
+      const result = await window.electronAPI.seed.loadSample()
+      if (result.success) {
+        const [property, panel] = await Promise.all([
+          window.electronAPI.properties.getCurrentOrNull(),
+          window.electronAPI.panels.getCurrentOrNull()
+        ])
+
+        if (property && panel) {
+          onComplete(property, panel)
+        } else {
+          alert('Sample data loaded but no property or panel found')
+          setIsLoadingSample(false)
+        }
+      } else {
+        alert(result.message || 'Failed to load sample')
+        setIsLoadingSample(false)
+      }
+    } catch (error) {
+      alert('Error loading sample: ' + (error instanceof Error ? error.message : 'Unknown error'))
+      setIsLoadingSample(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-8">
       <div className="w-full max-w-4xl">
@@ -112,7 +139,9 @@ export function OnboardingWizard({ onComplete }: OnboardingWizardProps) {
             <Step0ChoiceScreen
               onCreateNew={handleCreateNew}
               onRestore={handleRestore}
+              onLoadSample={handleLoadSample}
               isImporting={isImporting}
+              isLoadingSample={isLoadingSample}
             />
           )}
           {currentStep === 1 && (

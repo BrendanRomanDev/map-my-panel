@@ -41,3 +41,10 @@ pnpm-debug.log*
 app/
 release/
 .devswarm-temp/
+
+# Local backup exports (anything saved to repo root during testing)
+/backup-*.json
+/personal-backup-*.json
+
+# One-off export script output (npm run export:data writes here)
+/tmp/
