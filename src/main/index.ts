@@ -8,10 +8,9 @@ let mainWindow: BrowserWindow | null = null
 // Determine if we're in development mode
 const isDev = !app.isPackaged
 
-// Get the preload script path
-const preloadPath = isDev
-  ? join(__dirname, '../preload/index.mjs')
-  : join(__dirname, '../preload/index.js')
+// Get the preload script path. electron-vite emits index.mjs for both
+// dev and prod, so the same path resolves in both contexts.
+const preloadPath = join(__dirname, '../preload/index.mjs')
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({

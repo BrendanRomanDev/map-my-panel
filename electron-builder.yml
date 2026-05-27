@@ -1,0 +1,63 @@
+appId: io.github.brendanromandev.mapmypanel
+productName: Map My Panel
+copyright: Copyright © 2026 Brendan Roman
+
+directories:
+  output: release
+  buildResources: build
+
+# What to package. electron-vite outputs everything we need into ./out/.
+# package.json is required so Electron knows the main entry. better-sqlite3
+# is bundled separately because it's a native module that resolves at runtime
+# from node_modules, not via the Vite bundle.
+files:
+  - out/**/*
+  - package.json
+  - "!**/{.DS_Store,.git,.vscode,.idea}"
+  - "!**/{*.md,*.markdown}"
+  - "!**/{tsconfig*.json,tailwind.config.*,postcss.config.*,playwright.config.*}"
+  - "!**/{tmp,scripts,docs,tests,e2e,.bmad-core,.ai,.devswarm-temp}/**"
+
+# Bundle the native better-sqlite3 binary that postinstall (electron-rebuild)
+# already compiled for the current Electron ABI.
+asarUnpack:
+  - "**/node_modules/better-sqlite3/**/*"
+
+mac:
+  category: public.app-category.utilities
+  target:
+    - target: dmg
+      arch:
+        - arm64
+        - x64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  # Unsigned for v0.1.0. Friends will need to right-click -> Open the first
+  # time. Setting identity: null tells electron-builder not to try signing.
+  identity: null
+
+dmg:
+  title: ${productName} ${version}
+  iconSize: 100
+  contents:
+    - x: 130
+      y: 220
+      type: file
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: ${productName}-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Map My Panel

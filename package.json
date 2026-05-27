@@ -24,7 +24,11 @@
     "test:e2e:ui": "npm run build && playwright test --ui",
     "test:e2e:debug": "npm run build && playwright test --debug",
     "test:coverage": "vitest run --coverage",
-    "export:data": "tsx scripts/export-data.ts"
+    "export:data": "tsx scripts/export-data.ts",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:all": "npm run build && electron-builder --mac --win",
+    "dist:dir": "npm run build && electron-builder --dir"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.56.2",
