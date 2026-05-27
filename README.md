@@ -4,6 +4,13 @@ A desktop app for documenting electrical breaker panels. Map every outlet, switc
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 
+<!--
+  Hero screenshot. Drop a PNG at docs/screenshots/hero.png.
+  Recommended: the main breaker panel grid view with a populated panel — wide
+  aspect ratio (around 1600x1000), light or dark theme, your call.
+-->
+![Map My Panel — main view](./docs/screenshots/hero.png)
+
 ---
 
 ## Download & Install
