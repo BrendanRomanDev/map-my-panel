@@ -2,6 +2,15 @@
 
 All notable changes to Map My Panel are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] — 2026-05-27
+
+Polish release. No functional changes — same features as v0.1.0.
+
+### Changed
+
+- App icon replaced with the final design (stylized breaker panel with three wires fanning out to three connected devices). The previous v0.1.0 build shipped with a placeholder icon.
+- README now has a hero screenshot slot — drop your own screenshot into `docs/screenshots/hero.png` to populate.
+
 ## [0.1.0] — 2026-05-27
 
 First public release. The app is feature-complete for documenting residential electrical panels and ready for friends-and-family use.
