@@ -68,6 +68,22 @@ describe('Panel delete — polymorphic link cleanup', () => {
     expect(tags.findById(tag.id)).not.toBeNull()
   })
 
+  it('trigger cleans links even on a RAW cascade delete (bypassing repos)', () => {
+    const tags = new TagRepository(db)
+    const tag = tags.create({ property_id: propertyId, name: 'Raw' })
+    tags.attach(tag.id, 'breaker', breakerId)
+    tags.attach(tag.id, 'entity', entityId)
+
+    // Delete the panel with raw SQL — no repository method involved at all.
+    // FK cascade removes breakers/entities; AFTER DELETE triggers must still
+    // clean up their polymorphic links.
+    db.prepare('DELETE FROM panels WHERE id = ?').run(panelId)
+
+    expect(db.prepare('SELECT COUNT(*) c FROM tag_links').get() as any).toMatchObject({ c: 0 })
+    expect(db.prepare('SELECT COUNT(*) c FROM breakers').get() as any).toMatchObject({ c: 0 })
+    expect(db.prepare('SELECT COUNT(*) c FROM entities').get() as any).toMatchObject({ c: 0 })
+  })
+
   it('keeps a multi-target event that still has links elsewhere after panel delete', () => {
     const history = new HistoryRepository(db)
     const panels = new PanelRepository(db)

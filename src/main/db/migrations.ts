@@ -600,4 +600,71 @@ export function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('011_default_tag_icons')
     console.log('Migration 011_default_tag_icons completed')
   }
+
+  // Migration 012: DB-level integrity for polymorphic tag/history links.
+  //
+  // tag_links/event_links reference panels/breakers/entities/properties via a
+  // (target_type, target_id) pair, which can't be a real FK. So when a parent
+  // row is deleted — ESPECIALLY via an ON DELETE CASCADE that bypasses the
+  // repository layer — those links were left dangling. These AFTER DELETE
+  // triggers enforce cleanup at the database layer, so it fires no matter how
+  // the row is deleted. Also backfills cleanup of any pre-existing orphans.
+  if (!appliedMigrations.includes('012_polymorphic_link_integrity')) {
+    console.log('Running migration: 012_polymorphic_link_integrity')
+
+    database.exec(`
+      -- 1) Clean up orphans already in the database (pre-trigger)
+      DELETE FROM tag_links
+      WHERE (target_type = 'panel'    AND target_id NOT IN (SELECT id FROM panels))
+         OR (target_type = 'breaker'  AND target_id NOT IN (SELECT id FROM breakers))
+         OR (target_type = 'entity'   AND target_id NOT IN (SELECT id FROM entities))
+         OR (target_type = 'property' AND target_id NOT IN (SELECT id FROM properties));
+
+      DELETE FROM event_links
+      WHERE (target_type = 'panel'    AND target_id NOT IN (SELECT id FROM panels))
+         OR (target_type = 'breaker'  AND target_id NOT IN (SELECT id FROM breakers))
+         OR (target_type = 'entity'   AND target_id NOT IN (SELECT id FROM entities))
+         OR (target_type = 'property' AND target_id NOT IN (SELECT id FROM properties));
+
+      DELETE FROM history_events
+      WHERE id NOT IN (SELECT DISTINCT event_id FROM event_links);
+
+      -- 2) AFTER DELETE triggers: remove links for the deleted target. These
+      -- fire on FK cascades too, closing the bypass.
+      CREATE TRIGGER trg_panel_delete_links AFTER DELETE ON panels
+      BEGIN
+        DELETE FROM tag_links   WHERE target_type = 'panel' AND target_id = OLD.id;
+        DELETE FROM event_links WHERE target_type = 'panel' AND target_id = OLD.id;
+      END;
+
+      CREATE TRIGGER trg_breaker_delete_links AFTER DELETE ON breakers
+      BEGIN
+        DELETE FROM tag_links   WHERE target_type = 'breaker' AND target_id = OLD.id;
+        DELETE FROM event_links WHERE target_type = 'breaker' AND target_id = OLD.id;
+      END;
+
+      CREATE TRIGGER trg_entity_delete_links AFTER DELETE ON entities
+      BEGIN
+        DELETE FROM tag_links   WHERE target_type = 'entity' AND target_id = OLD.id;
+        DELETE FROM event_links WHERE target_type = 'entity' AND target_id = OLD.id;
+      END;
+
+      CREATE TRIGGER trg_property_delete_links AFTER DELETE ON properties
+      BEGIN
+        DELETE FROM tag_links   WHERE target_type = 'property' AND target_id = OLD.id;
+        DELETE FROM event_links WHERE target_type = 'property' AND target_id = OLD.id;
+      END;
+
+      -- 3) When an event link is removed, prune the event if it has no links left.
+      CREATE TRIGGER trg_event_link_prune AFTER DELETE ON event_links
+      BEGIN
+        DELETE FROM history_events
+        WHERE id = OLD.event_id
+          AND NOT EXISTS (SELECT 1 FROM event_links WHERE event_id = OLD.event_id);
+      END;
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('012_polymorphic_link_integrity')
+    console.log('Migration 012_polymorphic_link_integrity completed')
+  }
 }
