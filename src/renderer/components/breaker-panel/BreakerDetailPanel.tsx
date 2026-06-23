@@ -13,9 +13,11 @@ interface BreakerDetailPanelProps {
   breaker: BreakerWithEntityCount | null
   panelId: string
   onClose: () => void
+  // Optional: open the global Property History view (drawer "view full history")
+  onViewHistory?: () => void
 }
 
-export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailPanelProps) {
+export function BreakerDetailPanel({ breaker, panelId, onClose, onViewHistory }: BreakerDetailPanelProps) {
   const queryClient = useQueryClient()
   const { data: allBreakers } = useBreakers(panelId)
   const { data: entities } = useEntitiesByBreaker(breaker?.id || '')
@@ -489,17 +491,6 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
           </div>
         )}
 
-        {/* History */}
-        {panel && !breaker.is_container && (
-          <HistorySection
-            targetType="breaker"
-            targetId={breaker.id}
-            propertyId={panel.property_id}
-            panelId={panelId}
-            targetLabel={`Breaker ${breaker.position}${breaker.position_slot || ''}`}
-          />
-        )}
-
         {/* Form */}
         <div className="space-y-4">
           {/* Label */}
@@ -708,6 +699,21 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
               No entities assigned yet
             </div>
           )}
+          </div>
+        )}
+
+        {/* History (bottom of drawer; compact with link to full viewer) */}
+        {panel && !breaker.is_container && (
+          <div className="pt-4 border-t border-border">
+            <HistorySection
+              targetType="breaker"
+              targetId={breaker.id}
+              propertyId={panel.property_id}
+              panelId={panelId}
+              targetLabel={`Breaker ${breaker.position}${breaker.position_slot || ''}`}
+              compact
+              onViewFull={onViewHistory}
+            />
           </div>
         )}
       </div>

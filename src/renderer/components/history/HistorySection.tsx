@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { TargetType, HistoryEventWithDetails } from '@shared/types'
-import { useHistoryForTarget } from '../../hooks/useHistory'
-import { TagBadge } from '../tags/TagBadge'
+import { useHistoryForTarget, useBreakerHistoryRollup } from '../../hooks/useHistory'
+import { HistoryTimeline } from './HistoryTimeline'
 import { AddEventModal } from './AddEventModal'
 import { EditEventModal } from './EditEventModal'
 
@@ -10,21 +10,11 @@ interface HistorySectionProps {
   targetId: string
   propertyId: string
   panelId: string
-  // A human label for the current target, used to pre-fill the Add modal's
-  // target list (e.g. "Breaker 12").
+  // Human label for the current target, pre-fills the Add modal target list.
   targetLabel: string
-}
-
-// Formats a YYYY-MM-DD date string for display without timezone drift.
-function formatDate(ymd: string): string {
-  const [y, m, d] = ymd.split('-').map(Number)
-  if (!y || !m || !d) return ymd
-  const date = new Date(y, m - 1, d)
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-function yearOf(ymd: string): string {
-  return ymd.split('-')[0] || '—'
+  // Compact mode (drawer): cap the list and show a "View full history" link.
+  compact?: boolean
+  onViewFull?: () => void
 }
 
 export function HistorySection({
@@ -32,23 +22,21 @@ export function HistorySection({
   targetId,
   propertyId,
   panelId,
-  targetLabel
+  targetLabel,
+  compact = false,
+  onViewFull
 }: HistorySectionProps) {
-  const { data: events } = useHistoryForTarget(targetType, targetId)
+  // Breakers roll up their assigned entities' events; others list directly.
+  const rollup = useBreakerHistoryRollup(targetType === 'breaker' ? targetId : null)
+  const direct = useHistoryForTarget(targetType !== 'breaker' ? targetType : ('breaker' as TargetType), targetId)
+  const events = (targetType === 'breaker' ? rollup.data : direct.data) || []
+
   const [isAdding, setIsAdding] = useState(false)
   const [editing, setEditing] = useState<HistoryEventWithDetails | null>(null)
 
-  // Group events by year (they arrive newest-first already)
-  const groups: { year: string; events: HistoryEventWithDetails[] }[] = []
-  for (const ev of events || []) {
-    const year = yearOf(ev.occurred_on)
-    const last = groups[groups.length - 1]
-    if (last && last.year === year) {
-      last.events.push(ev)
-    } else {
-      groups.push({ year, events: [ev] })
-    }
-  }
+  const COMPACT_LIMIT = 3
+  const shown = compact ? events.slice(0, COMPACT_LIMIT) : events
+  const hiddenCount = events.length - shown.length
 
   const siblingSummary = (ev: HistoryEventWithDetails): string | null => {
     const others = ev.targets.filter(
@@ -70,49 +58,15 @@ export function HistorySection({
         </button>
       </div>
 
-      {!events || events.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No history yet.</p>
-      ) : (
-        <div className="space-y-3">
-          {groups.map(group => (
-            <div key={group.year}>
-              <div className="text-xs font-semibold text-muted-foreground mb-1">{group.year}</div>
-              <div className="space-y-2">
-                {group.events.map(ev => {
-                  const siblings = siblingSummary(ev)
-                  return (
-                    <button
-                      key={ev.id}
-                      onClick={() => setEditing(ev)}
-                      className="w-full text-left p-2 border border-border rounded hover:bg-muted/50"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">
-                          {ev.tag?.icon ? `${ev.tag.icon} ` : ''}
-                          {ev.event_type_name || ev.title || 'Event'}
-                        </span>
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
-                          {formatDate(ev.occurred_on)}
-                        </span>
-                      </div>
-                      {ev.tag && (
-                        <div className="mt-1">
-                          <TagBadge tag={ev.tag} />
-                        </div>
-                      )}
-                      {ev.notes && (
-                        <div className="text-xs text-muted-foreground mt-1">{ev.notes}</div>
-                      )}
-                      {siblings && (
-                        <div className="text-xs text-muted-foreground mt-1">↳ also: {siblings}</div>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+      <HistoryTimeline events={shown} onSelect={setEditing} siblingSummary={siblingSummary} />
+
+      {compact && (hiddenCount > 0 || events.length > 0) && onViewFull && (
+        <button
+          onClick={onViewFull}
+          className="mt-2 text-xs text-primary hover:underline"
+        >
+          View full history{hiddenCount > 0 ? ` (${hiddenCount} more)` : ''} →
+        </button>
       )}
 
       {isAdding && (

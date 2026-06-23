@@ -4,6 +4,7 @@ import { HistoryRepository } from '../db/repositories'
 import type {
   HistoryEvent,
   HistoryEventWithDetails,
+  RolledUpHistoryEvent,
   CreateHistoryEventInput,
   UpdateHistoryEventInput,
   EventType,
@@ -50,6 +51,10 @@ export function registerHistoryHandlers(): void {
 
   ipcMain.handle('history:listForProperty', async (_, propertyId: string): Promise<HistoryEventWithDetails[]> => {
     return repo.listForProperty(propertyId)
+  })
+
+  ipcMain.handle('history:listForBreakerRollup', async (_, breakerId: string): Promise<RolledUpHistoryEvent[]> => {
+    return repo.listForBreakerRollup(breakerId)
   })
 
   // Event types

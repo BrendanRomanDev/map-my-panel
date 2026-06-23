@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import type { Entity } from '@shared/types'
 import { TagBadgeList } from '../tags/TagBadgeList'
+import { EntityHistoryModal } from '../history/EntityHistoryModal'
 
 interface EntityCardProps {
   entity: Entity
@@ -10,9 +12,16 @@ interface EntityCardProps {
 }
 
 export function EntityCard({ entity, onClick, onEdit, onHover, isSelected }: EntityCardProps) {
+  const [showHistory, setShowHistory] = useState(false)
+
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation()
     onEdit?.()
+  }
+
+  const handleHistory = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setShowHistory(true)
   }
 
   const handleMouseEnter = () => {
@@ -89,6 +98,26 @@ export function EntityCard({ entity, onClick, onEdit, onHover, isSelected }: Ent
               {entity.breaker_ids.length}
             </div>
           )}
+          <button
+            onClick={handleHistory}
+            className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            title="View history"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 2" />
+            </svg>
+          </button>
           {onEdit && (
             <button
               onClick={handleEdit}
@@ -113,6 +142,9 @@ export function EntityCard({ entity, onClick, onEdit, onHover, isSelected }: Ent
           )}
         </div>
       </div>
+      {showHistory && (
+        <EntityHistoryModal entity={entity} onClose={() => setShowHistory(false)} />
+      )}
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { ByRoomView } from '../entities/ByRoomView'
 import { ByBreakerView } from '../entities/ByBreakerView'
 import { BreakerPanelGrid } from '../breaker-panel/BreakerPanelGrid'
 import { SettingsView } from '../settings/SettingsView'
+import { PropertyHistoryView } from '../history/PropertyHistoryView'
 import { AddEntityModal } from '../entities/AddEntityModal'
 import { AddPanelModal } from '../property/AddPanelModal'
 import { PropertySelectorModal } from '../property/PropertySelectorModal'
@@ -30,6 +31,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
   const [roomFilter, setRoomFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [showSettings, setShowSettings] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const [showAddEntityModal, setShowAddEntityModal] = useState(false)
   const [showAddPanelModal, setShowAddPanelModal] = useState(false)
   const [showPropertyModal, setShowPropertyModal] = useState(false)
@@ -198,7 +200,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
       <header className="border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {!showSettings ? (
+            {!showSettings && !showHistory ? (
               <div className="flex items-center gap-2">
                 {allProperties && allProperties.length > 1 && (
                   <button
@@ -220,13 +222,30 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
                   </button>
                 )}
               </div>
+            ) : showHistory ? (
+              <h1 className="text-xl font-bold">Property History</h1>
             ) : (
               <h1 className="text-xl font-bold">Settings</h1>
             )}
           </div>
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setShowSettings(!showSettings)}
+              onClick={() => {
+                setShowHistory(!showHistory)
+                setShowSettings(false)
+              }}
+              className={`p-2 rounded-md transition-colors ${showHistory ? 'bg-muted' : 'hover:bg-muted'}`}
+              title={showHistory ? 'Back to Panel' : 'Property History'}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
+                setShowSettings(!showSettings)
+                setShowHistory(false)
+              }}
               className="p-2 hover:bg-muted rounded-md transition-colors"
               title={showSettings ? 'Back to Panel' : 'Settings'}
             >
@@ -247,7 +266,14 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
 
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden" onClick={() => setSelectedEntityId(null)}>
-        {showSettings ? (
+        {showHistory ? (
+          /* Property History View - Full Width */
+          <div className="flex-1 p-6 overflow-auto">
+            <div className="max-w-3xl mx-auto">
+              <PropertyHistoryView propertyId={property.id} panelId={panel.id} />
+            </div>
+          </div>
+        ) : showSettings ? (
           /* Settings View - Full Width */
           <div className="flex-1 p-6 overflow-auto">
             <div className="max-w-2xl mx-auto">

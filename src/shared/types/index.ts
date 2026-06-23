@@ -247,3 +247,11 @@ export interface HistoryEventWithDetails extends HistoryEvent {
   tag: Tag | null
   targets: TargetRef[]
 }
+
+// A history event as seen in a rolled-up view (e.g. a breaker showing events
+// from its assigned entities). `via` describes how the event reached this
+// view: 'direct' = attached to the viewed target itself; otherwise the name
+// of the entity it bubbled up through.
+export interface RolledUpHistoryEvent extends HistoryEventWithDetails {
+  via: 'direct' | { entityId: string; entityName: string }
+}

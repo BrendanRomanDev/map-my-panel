@@ -11,6 +11,15 @@ export function useHistoryForTarget(targetType: TargetType, targetId: string | n
   })
 }
 
+// Rolled-up breaker history: direct events + events on assigned entities
+export function useBreakerHistoryRollup(breakerId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.history.breakerRollup(breakerId || ''),
+    queryFn: () => window.electronAPI.history.listForBreakerRollup(breakerId!),
+    enabled: !!breakerId
+  })
+}
+
 // All history events for a property (global timeline)
 export function useHistoryForProperty(propertyId: string | null) {
   return useQuery({

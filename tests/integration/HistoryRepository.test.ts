@@ -146,4 +146,62 @@ describe('HistoryRepository', () => {
     expect(after.event_type_id).toBeNull()
     expect(after.event_type_name).toBeNull()
   })
+
+  it('listForBreakerRollup includes direct breaker events AND its entities events', () => {
+    // Set up a panel, a breaker, and an entity assigned to that breaker
+    const panelId = 'panel-1'
+    db.prepare(
+      'INSERT INTO panels (id, property_id, name, total_positions, main_breaker_amperage) VALUES (?, ?, ?, ?, ?)'
+    ).run(panelId, propertyId, 'Main', 20, 200)
+    const breakerId = 'breaker-1'
+    db.prepare(
+      `INSERT INTO breakers (id, panel_id, position, breaker_type, amperage, status, is_powered, is_container)
+       VALUES (?, ?, ?, 'single-pole', 15, 'active', 1, 0)`
+    ).run(breakerId, panelId, 1)
+    const entityId = 'entity-1'
+    db.prepare(
+      `INSERT INTO entities (id, panel_id, breaker_ids, entity_type, name) VALUES (?, ?, ?, 'outlet', 'Kitchen Outlet')`
+    ).run(entityId, panelId, JSON.stringify([breakerId]))
+
+    // One event directly on the breaker, one on the entity
+    repo.createEvent({ property_id: propertyId, occurred_on: '2026-06-01', targets: [{ target_type: 'breaker', target_id: breakerId }] })
+    repo.createEvent({ property_id: propertyId, occurred_on: '2026-06-10', targets: [{ target_type: 'entity', target_id: entityId }] })
+
+    const rolled = repo.listForBreakerRollup(breakerId)
+    expect(rolled).toHaveLength(2)
+    const directOne = rolled.find(e => e.via === 'direct')
+    const viaEntity = rolled.find(e => e.via !== 'direct')
+    expect(directOne).toBeTruthy()
+    expect(viaEntity).toBeTruthy()
+    expect(viaEntity!.via).toMatchObject({ entityName: 'Kitchen Outlet' })
+  })
+
+  it('rollup dedupes when an event targets both the breaker and its entity (direct wins)', () => {
+    const panelId = 'panel-2'
+    db.prepare(
+      'INSERT INTO panels (id, property_id, name, total_positions, main_breaker_amperage) VALUES (?, ?, ?, ?, ?)'
+    ).run(panelId, propertyId, 'Main2', 20, 200)
+    const breakerId = 'breaker-2'
+    db.prepare(
+      `INSERT INTO breakers (id, panel_id, position, breaker_type, amperage, status, is_powered, is_container)
+       VALUES (?, ?, ?, 'single-pole', 15, 'active', 1, 0)`
+    ).run(breakerId, panelId, 1)
+    const entityId = 'entity-2'
+    db.prepare(
+      `INSERT INTO entities (id, panel_id, breaker_ids, entity_type, name) VALUES (?, ?, ?, 'outlet', 'Outlet')`
+    ).run(entityId, panelId, JSON.stringify([breakerId]))
+
+    repo.createEvent({
+      property_id: propertyId,
+      occurred_on: '2026-06-05',
+      targets: [
+        { target_type: 'breaker', target_id: breakerId },
+        { target_type: 'entity', target_id: entityId }
+      ]
+    })
+
+    const rolled = repo.listForBreakerRollup(breakerId)
+    expect(rolled).toHaveLength(1)
+    expect(rolled[0].via).toBe('direct')
+  })
 })

@@ -3,6 +3,7 @@ import Database from 'better-sqlite3'
 import type {
   HistoryEvent,
   HistoryEventWithDetails,
+  RolledUpHistoryEvent,
   CreateHistoryEventInput,
   UpdateHistoryEventInput,
   EventType,
@@ -172,6 +173,50 @@ export class HistoryRepository {
       )
       .all(targetType, targetId) as any[]
     return rows.map(row => this.decorate(this.mapRowToEvent(row)))
+  }
+
+  // Rolled-up breaker view: events attached directly to the breaker PLUS
+  // events on entities assigned to it (entities store breaker_ids as JSON).
+  // Each result is marked `via` = 'direct' or the source entity. Deduped by
+  // event id (direct wins), newest first.
+  listForBreakerRollup(breakerId: string): RolledUpHistoryEvent[] {
+    // Direct breaker events
+    const directRows = this.db
+      .prepare(
+        `SELECT e.* FROM history_events e
+         INNER JOIN event_links l ON l.event_id = e.id
+         WHERE l.target_type = 'breaker' AND l.target_id = ?`
+      )
+      .all(breakerId) as any[]
+
+    // Events on entities assigned to this breaker
+    const entityRows = this.db
+      .prepare(
+        `SELECT ev.*, ent.id AS via_entity_id, ent.name AS via_entity_name
+         FROM entities ent, json_each(ent.breaker_ids) AS b
+         INNER JOIN event_links l ON l.target_type = 'entity' AND l.target_id = ent.id
+         INNER JOIN history_events ev ON ev.id = l.event_id
+         WHERE b.value = ?`
+      )
+      .all(breakerId) as any[]
+
+    const byId = new Map<string, RolledUpHistoryEvent>()
+
+    for (const row of directRows) {
+      byId.set(row.id, { ...this.decorate(this.mapRowToEvent(row)), via: 'direct' })
+    }
+    for (const row of entityRows) {
+      if (byId.has(row.id)) continue // direct attachment wins
+      byId.set(row.id, {
+        ...this.decorate(this.mapRowToEvent(row)),
+        via: { entityId: row.via_entity_id, entityName: row.via_entity_name }
+      })
+    }
+
+    return [...byId.values()].sort((a, b) => {
+      if (a.occurred_on !== b.occurred_on) return a.occurred_on < b.occurred_on ? 1 : -1
+      return a.logged_at < b.logged_at ? 1 : -1
+    })
   }
 
   listForProperty(propertyId: string): HistoryEventWithDetails[] {
