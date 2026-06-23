@@ -26,6 +26,13 @@ export default defineConfig({
     }
   },
   renderer: {
+    // Dedicated dev-server port so running two Electron apps at once doesn't
+    // collide on Vite's default (5173). strictPort makes a conflict fail loudly
+    // instead of silently loading the other app's already-running server.
+    server: {
+      port: 5273,
+      strictPort: true
+    },
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src/renderer'),

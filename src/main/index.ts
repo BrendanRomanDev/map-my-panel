@@ -26,9 +26,11 @@ function createWindow(): void {
     }
   })
 
-  // Load the app
+  // Load the app. In dev, use the URL electron-vite injects (derived from the
+  // configured renderer port) rather than a hardcoded port — otherwise a second
+  // Electron app already serving on the old port would get loaded instead.
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173')
+    mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL || 'http://localhost:5273')
     mainWindow.webContents.openDevTools()
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
