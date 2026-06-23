@@ -18,7 +18,15 @@ import type {
   TagLink,
   CreateTagInput,
   UpdateTagInput,
-  TargetType
+  TargetType,
+  TargetRef,
+  HistoryEvent,
+  HistoryEventWithDetails,
+  CreateHistoryEventInput,
+  UpdateHistoryEventInput,
+  EventType,
+  CreateEventTypeInput,
+  UpdateEventTypeInput
 } from '../shared/types'
 
 export interface ElectronAPI {
@@ -87,6 +95,20 @@ export interface ElectronAPI {
     attach: (tagId: string, targetType: TargetType, targetId: string) => Promise<void>
     detach: (tagId: string, targetType: TargetType, targetId: string) => Promise<void>
     listTargetsForTag: (tagId: string) => Promise<TagLink[]>
+  }
+  history: {
+    createEvent: (input: CreateHistoryEventInput) => Promise<HistoryEventWithDetails>
+    updateEvent: (id: string, input: UpdateHistoryEventInput) => Promise<HistoryEventWithDetails | null>
+    deleteEvent: (id: string) => Promise<boolean>
+    findById: (id: string) => Promise<HistoryEvent | null>
+    addTargets: (eventId: string, targets: TargetRef[]) => Promise<void>
+    removeTarget: (eventId: string, targetType: TargetType, targetId: string) => Promise<boolean>
+    listForTarget: (targetType: TargetType, targetId: string) => Promise<HistoryEventWithDetails[]>
+    listForProperty: (propertyId: string) => Promise<HistoryEventWithDetails[]>
+    listEventTypes: (propertyId: string) => Promise<EventType[]>
+    createEventType: (input: CreateEventTypeInput) => Promise<EventType>
+    updateEventType: (id: string, input: UpdateEventTypeInput) => Promise<EventType | null>
+    deleteEventType: (id: string) => Promise<boolean>
   }
 }
 
@@ -158,6 +180,21 @@ const electronAPI: ElectronAPI = {
     attach: (tagId, targetType, targetId) => ipcRenderer.invoke('tags:attach', tagId, targetType, targetId),
     detach: (tagId, targetType, targetId) => ipcRenderer.invoke('tags:detach', tagId, targetType, targetId),
     listTargetsForTag: (tagId) => ipcRenderer.invoke('tags:listTargetsForTag', tagId)
+  },
+  history: {
+    createEvent: (input) => ipcRenderer.invoke('history:createEvent', input),
+    updateEvent: (id, input) => ipcRenderer.invoke('history:updateEvent', id, input),
+    deleteEvent: (id) => ipcRenderer.invoke('history:deleteEvent', id),
+    findById: (id) => ipcRenderer.invoke('history:findById', id),
+    addTargets: (eventId, targets) => ipcRenderer.invoke('history:addTargets', eventId, targets),
+    removeTarget: (eventId, targetType, targetId) =>
+      ipcRenderer.invoke('history:removeTarget', eventId, targetType, targetId),
+    listForTarget: (targetType, targetId) => ipcRenderer.invoke('history:listForTarget', targetType, targetId),
+    listForProperty: (propertyId) => ipcRenderer.invoke('history:listForProperty', propertyId),
+    listEventTypes: (propertyId) => ipcRenderer.invoke('history:listEventTypes', propertyId),
+    createEventType: (input) => ipcRenderer.invoke('history:createEventType', input),
+    updateEventType: (id, input) => ipcRenderer.invoke('history:updateEventType', id, input),
+    deleteEventType: (id) => ipcRenderer.invoke('history:deleteEventType', id)
   }
 }
 

@@ -216,6 +216,10 @@ export interface CreateEventTypeInput {
   name: string
 }
 
+export interface UpdateEventTypeInput {
+  name?: string
+}
+
 export interface CreateHistoryEventInput {
   property_id: string
   event_type_id?: string | null

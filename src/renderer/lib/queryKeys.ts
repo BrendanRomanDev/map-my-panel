@@ -34,6 +34,15 @@ export const queryKeys = {
     byTarget: (targetType: string, targetId: string) =>
       ['tags', 'byTarget', targetType, targetId] as const,
   },
+
+  // History keys
+  history: {
+    all: ['history'] as const,
+    byTarget: (targetType: string, targetId: string) =>
+      ['history', 'byTarget', targetType, targetId] as const,
+    byProperty: (propertyId: string) => ['history', 'byProperty', propertyId] as const,
+    eventTypes: (propertyId: string) => ['history', 'eventTypes', propertyId] as const,
+  },
 } as const
 
 /**

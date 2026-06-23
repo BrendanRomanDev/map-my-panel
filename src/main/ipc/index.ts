@@ -5,6 +5,7 @@ import { registerEntityHandlers } from './entityHandlers'
 import { registerBackupHandlers } from './backupHandlers'
 import { registerSeedHandlers } from './seedHandlers'
 import { registerTagHandlers } from './tagHandlers'
+import { registerHistoryHandlers } from './historyHandlers'
 
 export function registerAllHandlers(): void {
   registerPropertyHandlers()
@@ -14,4 +15,5 @@ export function registerAllHandlers(): void {
   registerBackupHandlers()
   registerSeedHandlers()
   registerTagHandlers()
+  registerHistoryHandlers()
 }
