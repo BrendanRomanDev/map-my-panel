@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useBreakers } from '../../hooks/useBreakers'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import { RoomSelector } from '../shared/RoomSelector'
 import { TypeSelector } from '../shared/TypeSelector'
+import { TagPicker } from '../tags/TagPicker'
 import type { Entity } from '@shared/types'
 
 interface EntityEditModalProps {
@@ -15,6 +16,11 @@ interface EntityEditModalProps {
 export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProps) {
   const queryClient = useQueryClient()
   const { data: allBreakers } = useBreakers(entity?.panel_id || '')
+  const { data: panel } = useQuery({
+    queryKey: ['panel', entity?.panel_id],
+    queryFn: () => window.electronAPI.panels.findById(entity!.panel_id),
+    enabled: !!entity?.panel_id
+  })
 
   const [name, setName] = useState('')
   const [entityType, setEntityType] = useState<string>('outlet')
@@ -251,6 +257,14 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
                 className="w-full px-3 py-2 border border-input rounded-md bg-background"
               />
             </div>
+
+            {/* Tags */}
+            {panel && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Tags</label>
+                <TagPicker targetType="entity" targetId={entity.id} propertyId={panel.property_id} />
+              </div>
+            )}
 
             {/* Breaker Assignment */}
             <div>
