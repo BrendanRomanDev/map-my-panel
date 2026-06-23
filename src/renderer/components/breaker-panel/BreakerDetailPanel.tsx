@@ -5,7 +5,7 @@ import { useEntitiesByBreaker, useEntities } from '../../hooks/useEntities'
 import { useTagSelection } from '../../hooks/useTags'
 import { AssignEntitiesModal } from './AssignEntitiesModal'
 import { TagPicker } from '../tags/TagPicker'
-import { AddEventModal } from '../history/AddEventModal'
+import { logBreakerLinkChange, mergeBreakerHistories } from '../../lib/historyActions'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import type { BreakerWithEntityCount } from '@shared/types'
 
@@ -35,9 +35,11 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
   const [linkedBreakerId, setLinkedBreakerId] = useState<string | null>(null)
   const [assignedEntityIds, setAssignedEntityIds] = useState<Set<string>>(new Set())
   const [isSaving, setIsSaving] = useState(false)
-  // After a save that splits a double-pole, offer to log a split event on both
-  // breakers. Holds the two breaker ids until the user logs or skips.
-  const [pendingSplit, setPendingSplit] = useState<{ a: string; b: string } | null>(null)
+  // Opt-in: when splitting (linked → not linked), log a marker event on both.
+  const [logSplit, setLogSplit] = useState(false)
+  // Opt-in checkboxes for the link/convert confirm dialog.
+  const [logCombine, setLogCombine] = useState(false)
+  const [mergeOnLink, setMergeOnLink] = useState(false)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -215,12 +217,15 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
       // Persist staged tag attach/detach changes
       await tagSelection.persist()
 
-      // If this save split a double-pole, offer to log a split event on both
-      // halves before closing. Otherwise close normally.
-      if (splitFromId) {
-        setIsSaving(false)
-        setPendingSplit({ a: breaker.id, b: splitFromId })
-        return
+      // If this save split a double-pole and the user opted in, log a marker
+      // event on both former halves (today). Past history stays untouched.
+      if (splitFromId && logSplit) {
+        await logBreakerLinkChange(queryClient, {
+          propertyId: panel!.property_id,
+          breakerAId: breaker.id,
+          breakerBId: splitFromId,
+          kind: 'split'
+        })
       }
 
       onClose()
@@ -351,9 +356,26 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
       // Refresh breakers data immediately (refetch instead of invalidate to ensure data is fresh)
       await queryClient.refetchQueries({ queryKey: queryKeys.breakers.byPanel(panelId) })
 
+      // Opt-in: merge prior histories (cross-link existing events to both).
+      if (mergeOnLink && panel) {
+        await mergeBreakerHistories(queryClient, breaker.id, breakerToConvert)
+      }
+
+      // Opt-in: log a "combined into double-pole" marker on both (today).
+      if (logCombine && panel) {
+        await logBreakerLinkChange(queryClient, {
+          propertyId: panel.property_id,
+          breakerAId: breaker.id,
+          breakerBId: breakerToConvert,
+          kind: 'combined'
+        })
+      }
+
       // Close dialog
       setShowConvertConfirm(false)
       setBreakerToConvert(null)
+      setLogCombine(false)
+      setMergeOnLink(false)
     } catch (error) {
       console.error('Failed to convert breaker to double-pole:', error)
       alert('Failed to convert breaker to double-pole')
@@ -363,6 +385,8 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
   const handleCancelConvert = () => {
     setShowConvertConfirm(false)
     setBreakerToConvert(null)
+    setLogCombine(false)
+    setMergeOnLink(false)
   }
 
   const handleDeleteTandem = async () => {
@@ -631,6 +655,25 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
                       {linkedBreaker.position_slot}
                     </p>
                   )}
+                  {/* Pending split: was linked, now set to "Not linked" */}
+                  {originalValues.linkedBreakerId &&
+                    originalValues.linkedBreakerId !== linkedBreakerId && (
+                      <label className="flex items-start gap-2 text-xs mt-2">
+                        <input
+                          type="checkbox"
+                          checked={logSplit}
+                          onChange={e => setLogSplit(e.target.checked)}
+                          className="mt-0.5"
+                        />
+                        <span>
+                          Log this split as a change event (today)
+                          <span className="block text-muted-foreground">
+                            Adds a "Split double-pole" entry to both. Past history is kept on each
+                            either way.
+                          </span>
+                        </span>
+                      </label>
+                    )}
                 </div>
               )}
             </>
@@ -800,6 +843,40 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
             <p className="text-sm text-muted-foreground mb-4">
               Would you like to convert it to a double-pole breaker and create the link?
             </p>
+
+            {/* Opt-in history actions (off by default — safe for initial setup) */}
+            <div className="space-y-2 mb-4 border-t border-border pt-3">
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={mergeOnLink}
+                  onChange={e => setMergeOnLink(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  Merge their prior history
+                  <span className="block text-xs text-muted-foreground">
+                    Each breaker's existing events become shared by both. Leave off to keep past
+                    history separate.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={logCombine}
+                  onChange={e => setLogCombine(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  Log this as a change event (today)
+                  <span className="block text-xs text-muted-foreground">
+                    Adds a "Combined into double-pole" entry. Skip during initial setup.
+                  </span>
+                </span>
+              </label>
+            </div>
+
             <div className="flex gap-2 justify-end">
               <button
                 onClick={handleCancelConvert}
@@ -818,25 +895,6 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         </div>
       )}
       </div>
-
-      {/* Split-double-pole prompt: prefilled event on both former halves */}
-      {pendingSplit && panel && (
-        <AddEventModal
-          propertyId={panel.property_id}
-          panelId={panelId}
-          title="Log this split?"
-          initialNewTypeName="Split double-pole"
-          initialNotes="Split from double-pole into independent breakers."
-          initialTargets={[
-            { target_type: 'breaker', target_id: pendingSplit.a },
-            { target_type: 'breaker', target_id: pendingSplit.b }
-          ]}
-          onClose={() => {
-            setPendingSplit(null)
-            onClose()
-          }}
-        />
-      )}
     </>
   )
 }
