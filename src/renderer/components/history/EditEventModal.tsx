@@ -33,11 +33,16 @@ export function EditEventModal({ event, propertyId, panelId, onClose }: EditEven
   const originalTargetKeys = new Set(event.targets.map(keyOf))
 
   const invalidateAll = () => {
-    // Refresh every target that was ever involved (old + new) + property
+    // Refresh every target that was ever involved (old + new) + property.
+    // Breakers read from the rollup query, so invalidate that too.
     const all = [...event.targets, ...targets]
-    all.forEach(t =>
+    all.forEach(t => {
       queryClient.invalidateQueries({ queryKey: queryKeys.history.byTarget(t.target_type, t.target_id) })
-    )
+      if (t.target_type === 'breaker') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.history.breakerRollup(t.target_id) })
+      }
+    })
+    queryClient.invalidateQueries({ queryKey: ['history', 'breakerRollup'] })
     queryClient.invalidateQueries({ queryKey: queryKeys.history.byProperty(propertyId) })
   }
 

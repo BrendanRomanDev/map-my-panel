@@ -80,10 +80,16 @@ export function AddEventModal({
         targets
       })
 
-      // Refresh timelines for every affected target + property
-      targets.forEach(t =>
+      // Refresh timelines for every affected target + property. Breakers read
+      // from the rollup query, so invalidate that key too (not just byTarget).
+      targets.forEach(t => {
         queryClient.invalidateQueries({ queryKey: queryKeys.history.byTarget(t.target_type, t.target_id) })
-      )
+        if (t.target_type === 'breaker') {
+          queryClient.invalidateQueries({ queryKey: queryKeys.history.breakerRollup(t.target_id) })
+        }
+      })
+      // An entity event bubbles into its breakers' rollups — refresh all breaker rollups.
+      queryClient.invalidateQueries({ queryKey: ['history', 'breakerRollup'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.history.byProperty(propertyId) })
 
       onClose()
