@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import type { BreakerWithEntityCount } from '@shared/types'
 import { TagBadgeList } from '../tags/TagBadgeList'
+import { BreakerHistoryModal } from '../history/BreakerHistoryModal'
 
 interface BreakerCardProps {
   breaker: BreakerWithEntityCount
@@ -12,6 +14,7 @@ interface BreakerCardProps {
 }
 
 export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false, onClick, onPowerToggle, onHover }: BreakerCardProps) {
+  const [showHistory, setShowHistory] = useState(false)
   const isContainer = breaker.is_container
 
   // For containers, derive status and power from children
@@ -50,6 +53,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
   }
 
   return (
+    <>
     <button
       onClick={onClick}
       onMouseEnter={() => onHover?.(breaker.id)}
@@ -135,6 +139,35 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
 
         {/* Power toggle and status indicator */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          {/* History (not for container positions). span+role to avoid nested buttons. */}
+          {!isContainer && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={e => {
+                e.stopPropagation()
+                setShowHistory(true)
+              }}
+              className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+              title="View history"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+            </span>
+          )}
+
           {/* Power toggle switch (only for actual breakers, not spare or container positions) */}
           {!isSpare && !isContainer && (
             <button
@@ -163,5 +196,9 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
         </div>
       </div>
     </button>
+    {showHistory && (
+      <BreakerHistoryModal breaker={breaker} onClose={() => setShowHistory(false)} />
+    )}
+    </>
   )
 }

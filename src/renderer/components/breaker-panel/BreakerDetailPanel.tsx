@@ -5,7 +5,6 @@ import { useEntitiesByBreaker, useEntities } from '../../hooks/useEntities'
 import { useTagSelection } from '../../hooks/useTags'
 import { AssignEntitiesModal } from './AssignEntitiesModal'
 import { TagPicker } from '../tags/TagPicker'
-import { HistorySection } from '../history/HistorySection'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import type { BreakerWithEntityCount } from '@shared/types'
 
@@ -13,11 +12,9 @@ interface BreakerDetailPanelProps {
   breaker: BreakerWithEntityCount | null
   panelId: string
   onClose: () => void
-  // Optional: open the global Property History view (drawer "view full history")
-  onViewHistory?: () => void
 }
 
-export function BreakerDetailPanel({ breaker, panelId, onClose, onViewHistory }: BreakerDetailPanelProps) {
+export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailPanelProps) {
   const queryClient = useQueryClient()
   const { data: allBreakers } = useBreakers(panelId)
   const { data: entities } = useEntitiesByBreaker(breaker?.id || '')
@@ -699,21 +696,6 @@ export function BreakerDetailPanel({ breaker, panelId, onClose, onViewHistory }:
               No entities assigned yet
             </div>
           )}
-          </div>
-        )}
-
-        {/* History (bottom of drawer; compact with link to full viewer) */}
-        {panel && !breaker.is_container && (
-          <div className="pt-4 border-t border-border">
-            <HistorySection
-              targetType="breaker"
-              targetId={breaker.id}
-              propertyId={panel.property_id}
-              panelId={panelId}
-              targetLabel={`Breaker ${breaker.position}${breaker.position_slot || ''}`}
-              compact
-              onViewFull={onViewHistory}
-            />
           </div>
         )}
       </div>
