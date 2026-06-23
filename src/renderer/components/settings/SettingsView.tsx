@@ -4,6 +4,7 @@ import { queryKeys } from '../../lib/queryKeys'
 import { generatePanelPDF } from '../../utils/pdfExport'
 import { useTheme } from '../../contexts/ThemeContext'
 import { TagManager } from './TagManager'
+import { EventTypeManager } from './EventTypeManager'
 import type { Panel, Property } from '@shared/types'
 
 interface SettingsViewProps {
@@ -1412,6 +1413,11 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
       {/* Manage Tags Section */}
       <div>
         <TagManager propertyId={propertyId} />
+      </div>
+
+      {/* Manage Event Types Section */}
+      <div>
+        <EventTypeManager propertyId={propertyId} />
       </div>
 
       {/* Danger Zone Section */}

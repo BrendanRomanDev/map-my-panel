@@ -270,6 +270,14 @@ export class HistoryRepository {
     return this.mapRowToEventType(row)
   }
 
+  // How many history events currently use this type (for delete warnings).
+  countEventsForType(eventTypeId: string): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) as count FROM history_events WHERE event_type_id = ?')
+      .get(eventTypeId) as { count: number }
+    return row.count
+  }
+
   // ---- Mappers / helpers --------------------------------------------------
 
   private decorate(event: HistoryEvent): HistoryEventWithDetails {

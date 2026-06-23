@@ -111,6 +111,7 @@ export interface ElectronAPI {
     createEventType: (input: CreateEventTypeInput) => Promise<EventType>
     updateEventType: (id: string, input: UpdateEventTypeInput) => Promise<EventType | null>
     deleteEventType: (id: string) => Promise<boolean>
+    countEventsForType: (eventTypeId: string) => Promise<number>
   }
 }
 
@@ -197,7 +198,8 @@ const electronAPI: ElectronAPI = {
     listEventTypes: (propertyId) => ipcRenderer.invoke('history:listEventTypes', propertyId),
     createEventType: (input) => ipcRenderer.invoke('history:createEventType', input),
     updateEventType: (id, input) => ipcRenderer.invoke('history:updateEventType', id, input),
-    deleteEventType: (id) => ipcRenderer.invoke('history:deleteEventType', id)
+    deleteEventType: (id) => ipcRenderer.invoke('history:deleteEventType', id),
+    countEventsForType: (eventTypeId) => ipcRenderer.invoke('history:countEventsForType', eventTypeId)
   }
 }
 

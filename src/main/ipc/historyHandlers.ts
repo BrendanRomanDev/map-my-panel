@@ -73,4 +73,8 @@ export function registerHistoryHandlers(): void {
   ipcMain.handle('history:deleteEventType', async (_, id: string): Promise<boolean> => {
     return repo.deleteEventType(id)
   })
+
+  ipcMain.handle('history:countEventsForType', async (_, eventTypeId: string): Promise<number> => {
+    return repo.countEventsForType(eventTypeId)
+  })
 }

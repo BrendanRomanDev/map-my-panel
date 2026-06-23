@@ -133,6 +133,14 @@ describe('HistoryRepository', () => {
     expect(repo.deleteEventType(et.id)).toBe(true)
   })
 
+  it('countEventsForType returns how many events use a type', () => {
+    const et = repo.createEventType({ property_id: propertyId, name: 'Inspection' })
+    expect(repo.countEventsForType(et.id)).toBe(0)
+    repo.createEvent({ property_id: propertyId, occurred_on: '2026-06-20', event_type_id: et.id, targets: [{ target_type: 'entity', target_id: 'e1' }] })
+    repo.createEvent({ property_id: propertyId, occurred_on: '2026-06-21', event_type_id: et.id, targets: [{ target_type: 'entity', target_id: 'e2' }] })
+    expect(repo.countEventsForType(et.id)).toBe(2)
+  })
+
   it('deleting an event type sets referencing events event_type_id to NULL (history survives)', () => {
     const et = repo.createEventType({ property_id: propertyId, name: 'Throwaway' })
     const event = repo.createEvent({
