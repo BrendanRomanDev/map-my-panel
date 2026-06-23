@@ -65,9 +65,13 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
   useEffect(() => {
     if (breaker && entities) {
       const entityIds = new Set(entities.map(e => e.id))
+      // Container breakers carry null amperage/type; fall back to defaults for
+      // the form (these fields aren't shown/edited for containers).
+      const amp = breaker.amperage ?? 15
+      const type = breaker.breaker_type ?? 'single-pole'
       setLabel(breaker.label || '')
-      setAmperage(breaker.amperage)
-      setBreakerType(breaker.breaker_type)
+      setAmperage(amp)
+      setBreakerType(type)
       setStatus(breaker.status)
       setIsPowered(breaker.is_powered)
       setLinkedBreakerId(breaker.linked_breaker_id)
@@ -76,8 +80,8 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
       // Store original values
       setOriginalValues({
         label: breaker.label || '',
-        amperage: breaker.amperage,
-        breakerType: breaker.breaker_type,
+        amperage: amp,
+        breakerType: type,
         status: breaker.status,
         isPowered: breaker.is_powered,
         linkedBreakerId: breaker.linked_breaker_id,

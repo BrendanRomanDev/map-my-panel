@@ -70,11 +70,11 @@ export function AddPanelModal({ propertyId, isOpen, onClose, onSuccess, existing
         // Create entity copies with new IDs but same properties
         const entityCopyInputs = templateEntities.map(entity => ({
           panel_id: panel.id,
-          breaker_id: null, // Unmapped by default - user will map them
+          breaker_ids: [], // Unmapped by default - user will map them
           name: entity.name,
           entity_type: entity.entity_type,
           room: entity.room,
-          description: entity.description
+          location: entity.location
         }))
 
         // Create all entities in batch

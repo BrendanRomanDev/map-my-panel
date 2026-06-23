@@ -102,10 +102,14 @@ export class PanelRepository extends BaseRepository<Panel, CreatePanelInput, Upd
   }
 
   delete(id: string): boolean {
-    const stmt = this.db.prepare('DELETE FROM panels WHERE id = ?')
-    const result = stmt.run(id)
-
-    return result.changes > 0
+    const del = this.db.transaction(() => {
+      // Breakers/entities cascade via FK, but their polymorphic tag/history
+      // links don't (no FK on target_id) — clean them up first.
+      this.cleanupPolymorphicLinksForPanel(id)
+      const result = this.db.prepare('DELETE FROM panels WHERE id = ?').run(id)
+      return result.changes > 0
+    })
+    return del()
   }
 
   resetPanel(panelId: string): { entitiesDeleted: number; breakersDeleted: number} {
@@ -114,6 +118,8 @@ export class PanelRepository extends BaseRepository<Panel, CreatePanelInput, Upd
 
     // Use transaction to ensure atomic operation
     const resetTransaction = this.db.transaction(() => {
+      // Clean polymorphic links before bulk-deleting (bypasses per-row cleanup)
+      this.cleanupPolymorphicLinksForPanel(panelId)
       const entitiesDeleted = entityRepo.deleteAllByPanel(panelId)
       const breakersDeleted = breakerRepo.deleteAllByPanel(panelId)
 
@@ -121,6 +127,34 @@ export class PanelRepository extends BaseRepository<Panel, CreatePanelInput, Upd
     })
 
     return resetTransaction()
+  }
+
+  // Removes tag_links + event_links for a panel and all its breakers/entities,
+  // then prunes any history_events left with zero links. Called on panel
+  // delete/reset, where FK cascades remove the rows but not the polymorphic links.
+  private cleanupPolymorphicLinksForPanel(panelId: string): void {
+    for (const table of ['tag_links', 'event_links']) {
+      // The panel itself
+      this.db.prepare(`DELETE FROM ${table} WHERE target_type = 'panel' AND target_id = ?`).run(panelId)
+      // Its breakers
+      this.db.prepare(
+        `DELETE FROM ${table} WHERE target_type = 'breaker' AND target_id IN (
+           SELECT id FROM breakers WHERE panel_id = ?
+         )`
+      ).run(panelId)
+      // Its entities
+      this.db.prepare(
+        `DELETE FROM ${table} WHERE target_type = 'entity' AND target_id IN (
+           SELECT id FROM entities WHERE panel_id = ?
+         )`
+      ).run(panelId)
+    }
+
+    // Prune history events that now have no links left (orphans).
+    this.db.prepare(
+      `DELETE FROM history_events
+       WHERE id NOT IN (SELECT DISTINCT event_id FROM event_links)`
+    ).run()
   }
 
   private mapRowToPanel(row: any): Panel {

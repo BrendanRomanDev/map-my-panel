@@ -64,13 +64,14 @@ export function BreakerPanelGrid({ panelId, highlightedEntityId }: BreakerPanelG
     entities.forEach(entity => {
       // Only include entities with rooms
       if (!entity.room || entity.room.trim() === '') return
+      const room = entity.room // narrowed local (closure below loses the guard)
 
       // Add room to each breaker this entity is assigned to
       entity.breaker_ids.forEach(breakerId => {
         if (!roomsMap.has(breakerId)) {
           roomsMap.set(breakerId, new Set())
         }
-        roomsMap.get(breakerId)!.add(entity.room)
+        roomsMap.get(breakerId)!.add(room)
       })
     })
 

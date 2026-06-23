@@ -63,7 +63,7 @@ export const invalidateEntityBreakerQueries = (
   oldBreakerId: string | null,
   newBreakerId: string | null
 ) => {
-  const queries = [
+  const queries: (readonly string[])[] = [
     queryKeys.entities.byPanel(panelId),
     queryKeys.entities.byRoom(panelId),
     queryKeys.entities.unmapped(panelId),

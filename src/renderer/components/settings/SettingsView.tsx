@@ -232,7 +232,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
         // Switch to the first available panel
         const firstPanel = remainingPanels[0]
         if (onPropertyChange) {
-          onPropertyChange(property, firstPanel)
+          onPropertyChange(property.id, firstPanel.id)
         }
 
         // Invalidate queries
