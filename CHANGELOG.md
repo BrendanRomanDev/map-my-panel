@@ -2,6 +2,29 @@
 
 All notable changes to Map My Panel are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-06-23
+
+Adds a Tags & Service-History system for documenting electrical conditions and work over time.
+
+### Added
+
+- **Tags** — reusable, color/icon-coded labels (e.g. "No Ground Wire", "Self-Grounding Outlet") attachable to breakers and entities. Crowded cards condense flagged tags to their icon with a hover description. Manage them in Settings (name, description, color, emoji icon, condense flag); ships with sensible defaults.
+- **Service History** — dated history events on entities, breakers, the panel, or the whole property. Each event has an editable occurrence date (separate from when it was logged), an event type, optional notes, and an optional tag. Add events to many targets at once (e.g. one "outlet change" across outlets on different breakers).
+- **History viewers** — a clock icon on every entity and breaker card opens its history; a breaker's view rolls up events from its assigned entities. A new top-level **Property History** tab shows the full timeline with type/tag/text filters and a standalone "add note" entry point.
+- **Event-type management** in Settings (add/rename/delete; deleting keeps the events, just untyped).
+
+### Changed
+
+- Breaker detail drawer now has a dimming scrim and closes on click-outside / Escape.
+- Double-pole linking and unlinking is staged until "Save Changes" (no longer persists on dialog confirm), validates against already-paired breakers, and offers opt-in history logging + history merge.
+- **Backup format upgraded to v3.0** to include tags & history. Older v1.0/v2.0 backups still import.
+
+### Fixed
+
+- Cleared all pre-existing TypeScript errors (incl. a broken "copy entities from template panel" path).
+- Deleting or resetting a panel no longer leaves orphaned tag/history links — enforced at the database layer via triggers, with a one-time cleanup of any existing orphans.
+- Dev server pinned to a dedicated port so running two Electron apps no longer cross-launches.
+
 ## [0.1.1] — 2026-05-27
 
 Polish release. No functional changes — same features as v0.1.0.
