@@ -465,4 +465,143 @@ function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('008_fix_existing_tandem_containers')
     console.log('Migration 008_fix_existing_tandem_containers completed')
   }
+
+  // Migration 009: Tags (reusable labels attachable to panels, breakers, or entities)
+  if (!appliedMigrations.includes('009_add_tags')) {
+    console.log('Running migration: 009_add_tags')
+
+    database.exec(`
+      -- Tags: property_id NULL means global/shared across all properties
+      CREATE TABLE tags (
+        id          TEXT PRIMARY KEY,
+        property_id TEXT,
+        name        TEXT NOT NULL,
+        description TEXT,
+        color       TEXT,
+        icon        TEXT,
+        condense    INTEGER NOT NULL DEFAULT 0 CHECK (condense IN (0, 1)),
+        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+      );
+
+      -- Polymorphic links: a tag attached to a (target_type, target_id).
+      -- No FK on the target columns (SQLite can't FK polymorphic refs); the
+      -- repository layer enforces integrity and cleans up on parent delete.
+      CREATE TABLE tag_links (
+        id          TEXT PRIMARY KEY,
+        tag_id      TEXT NOT NULL,
+        target_type TEXT NOT NULL CHECK (target_type IN ('panel', 'breaker', 'entity', 'property')),
+        target_id   TEXT NOT NULL,
+        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+        UNIQUE (tag_id, target_type, target_id)
+      );
+
+      CREATE INDEX idx_tags_property ON tags(property_id);
+      CREATE INDEX idx_tag_links_target ON tag_links(target_type, target_id);
+      CREATE INDEX idx_tag_links_tag ON tag_links(tag_id);
+
+      -- Case-insensitive name uniqueness, per scope. Split into two partial
+      -- indexes because SQLite treats each NULL property_id as distinct.
+      CREATE UNIQUE INDEX idx_tags_name_scoped ON tags(property_id, name COLLATE NOCASE)
+        WHERE property_id IS NOT NULL;
+      CREATE UNIQUE INDEX idx_tags_name_global ON tags(name COLLATE NOCASE)
+        WHERE property_id IS NULL;
+
+      -- Seed default tags for every existing property (additive; existing data untouched)
+      INSERT INTO tags (id, property_id, name, created_at, updated_at)
+      SELECT 'tag_' || hex(randomblob(8)), p.id, t.name, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      FROM properties p
+      CROSS JOIN (
+        SELECT 'No Ground Wire' AS name
+        UNION ALL SELECT 'Grounded to Box (Self-Grounding)'
+        UNION ALL SELECT 'Reverse Polarity'
+        UNION ALL SELECT 'GFCI Protected'
+        UNION ALL SELECT 'AFCI Protected'
+      ) t;
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('009_add_tags')
+    console.log('Migration 009_add_tags completed')
+  }
+
+  // Migration 010: History events + event types (unified service/event log)
+  if (!appliedMigrations.includes('010_add_history')) {
+    console.log('Running migration: 010_add_history')
+
+    database.exec(`
+      -- Event types: property_id NULL means global/shared across all properties
+      CREATE TABLE event_types (
+        id          TEXT PRIMARY KEY,
+        property_id TEXT,
+        name        TEXT NOT NULL,
+        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+      );
+
+      -- A dated, typed historical record. occurred_on is the editable maintenance
+      -- date; logged_at is the immutable record timestamp. tag_id is an optional,
+      -- editable bridge to a tag.
+      CREATE TABLE history_events (
+        id            TEXT PRIMARY KEY,
+        property_id   TEXT NOT NULL,
+        event_type_id TEXT,
+        title         TEXT,
+        notes         TEXT,
+        occurred_on   TEXT NOT NULL,
+        logged_at     DATETIME DEFAULT CURRENT_TIMESTAMP,
+        tag_id        TEXT,
+        created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (property_id)   REFERENCES properties(id)  ON DELETE CASCADE,
+        FOREIGN KEY (event_type_id) REFERENCES event_types(id) ON DELETE SET NULL,
+        FOREIGN KEY (tag_id)        REFERENCES tags(id)        ON DELETE SET NULL
+      );
+
+      -- One event, many targets. Mutable so a misclicked target can be removed.
+      CREATE TABLE event_links (
+        id          TEXT PRIMARY KEY,
+        event_id    TEXT NOT NULL,
+        target_type TEXT NOT NULL CHECK (target_type IN ('panel', 'breaker', 'entity', 'property')),
+        target_id   TEXT NOT NULL,
+        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (event_id) REFERENCES history_events(id) ON DELETE CASCADE,
+        UNIQUE (event_id, target_type, target_id)
+      );
+
+      CREATE INDEX idx_event_types_property ON event_types(property_id);
+      CREATE INDEX idx_history_events_property ON history_events(property_id);
+      CREATE INDEX idx_history_events_occurred ON history_events(occurred_on);
+      CREATE INDEX idx_event_links_target ON event_links(target_type, target_id);
+      CREATE INDEX idx_event_links_event ON event_links(event_id);
+
+      CREATE UNIQUE INDEX idx_event_types_name_scoped ON event_types(property_id, name COLLATE NOCASE)
+        WHERE property_id IS NOT NULL;
+      CREATE UNIQUE INDEX idx_event_types_name_global ON event_types(name COLLATE NOCASE)
+        WHERE property_id IS NULL;
+
+      -- Seed default event types for every existing property
+      INSERT INTO event_types (id, property_id, name, created_at)
+      SELECT 'evt_' || hex(randomblob(8)), p.id, t.name, CURRENT_TIMESTAMP
+      FROM properties p
+      CROSS JOIN (
+        SELECT 'Inspection' AS name
+        UNION ALL SELECT 'Outlet Change'
+        UNION ALL SELECT 'Switch Change'
+        UNION ALL SELECT 'Fixture Change'
+        UNION ALL SELECT 'Breaker Added'
+        UNION ALL SELECT 'Breaker Removed'
+        UNION ALL SELECT 'Meter Install'
+        UNION ALL SELECT 'Power Outage'
+        UNION ALL SELECT 'Repair'
+        UNION ALL SELECT 'Inspection (Third Party)'
+        UNION ALL SELECT 'Note'
+        UNION ALL SELECT 'Other'
+      ) t;
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('010_add_history')
+    console.log('Migration 010_add_history completed')
+  }
 }

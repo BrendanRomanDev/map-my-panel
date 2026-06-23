@@ -123,3 +123,123 @@ export interface EntitiesByRoom {
   room: string | null
   entities: Entity[]
 }
+
+// ---------------------------------------------------------------------------
+// Tags & History (see docs/architecture-tags-and-history.md)
+// ---------------------------------------------------------------------------
+
+// What a tag or history event can attach to (polymorphic target).
+// 'property' supports standalone events not tied to any panel/breaker/entity
+// (e.g. a utility-company note about the whole-house meter).
+export const TARGET_TYPES = {
+  PROPERTY: 'property',
+  PANEL: 'panel',
+  BREAKER: 'breaker',
+  ENTITY: 'entity'
+} as const
+export type TargetType = (typeof TARGET_TYPES)[keyof typeof TARGET_TYPES]
+
+export interface Tag {
+  id: string
+  property_id: string | null  // null = global, shared across all properties
+  name: string
+  description: string | null  // shown in hover popover (esp. when condensed to icon)
+  color: string | null  // semantic/theme-aware badge color key
+  icon: string | null  // emoji/icon shown when condensed
+  condense: boolean  // collapse to icon on crowded cards
+  created_at: Date
+  updated_at: Date
+}
+
+export interface TagLink {
+  id: string
+  tag_id: string
+  target_type: TargetType
+  target_id: string
+  created_at: Date
+}
+
+export interface EventType {
+  id: string
+  property_id: string | null  // null = global
+  name: string
+  created_at: Date
+}
+
+export interface HistoryEvent {
+  id: string
+  property_id: string
+  event_type_id: string | null  // null if the type was deleted
+  title: string | null
+  notes: string | null
+  occurred_on: string  // editable maintenance date, YYYY-MM-DD
+  logged_at: Date  // immutable record timestamp
+  tag_id: string | null  // optional attached tag (editable)
+  created_at: Date
+  updated_at: Date
+}
+
+export interface EventLink {
+  id: string
+  event_id: string
+  target_type: TargetType
+  target_id: string
+  created_at: Date
+}
+
+// A target reference used by bulk-add and link-editing operations
+export interface TargetRef {
+  target_type: TargetType
+  target_id: string
+}
+
+// Input types
+export interface CreateTagInput {
+  property_id: string | null  // null = create as global
+  name: string
+  description?: string | null
+  color?: string | null
+  icon?: string | null
+  condense?: boolean
+}
+
+export interface UpdateTagInput {
+  name?: string
+  description?: string | null
+  color?: string | null
+  icon?: string | null
+  condense?: boolean
+}
+
+export interface CreateEventTypeInput {
+  property_id: string | null  // null = global
+  name: string
+}
+
+export interface CreateHistoryEventInput {
+  property_id: string
+  event_type_id?: string | null
+  title?: string | null
+  notes?: string | null
+  occurred_on: string  // YYYY-MM-DD
+  tag_id?: string | null
+  // One event, many links (bulk add). If omitted/empty, the repository
+  // auto-attaches the event to its property (standalone note, e.g. a
+  // utility-company incident not tied to any panel/breaker/entity).
+  targets?: TargetRef[]
+}
+
+export interface UpdateHistoryEventInput {
+  event_type_id?: string | null
+  title?: string | null
+  notes?: string | null
+  occurred_on?: string
+  tag_id?: string | null
+}
+
+// Extended views
+export interface HistoryEventWithDetails extends HistoryEvent {
+  event_type_name: string | null
+  tag: Tag | null
+  targets: TargetRef[]
+}
