@@ -104,7 +104,7 @@ export function PropertyHistoryView({ propertyId, panelId }: PropertyHistoryView
           propertyId={propertyId}
           panelId={panelId}
           // No pre-checked target — defaults to a standalone property note
-          initialTarget={{ target_type: 'property', target_id: propertyId, label: 'Whole property' }}
+          initialTargets={[{ target_type: 'property', target_id: propertyId }]}
           onClose={() => setIsAdding(false)}
         />
       )}

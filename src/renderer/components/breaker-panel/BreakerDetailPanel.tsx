@@ -5,6 +5,7 @@ import { useEntitiesByBreaker, useEntities } from '../../hooks/useEntities'
 import { useTagSelection } from '../../hooks/useTags'
 import { AssignEntitiesModal } from './AssignEntitiesModal'
 import { TagPicker } from '../tags/TagPicker'
+import { AddEventModal } from '../history/AddEventModal'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import type { BreakerWithEntityCount } from '@shared/types'
 
@@ -34,6 +35,9 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
   const [linkedBreakerId, setLinkedBreakerId] = useState<string | null>(null)
   const [assignedEntityIds, setAssignedEntityIds] = useState<Set<string>>(new Set())
   const [isSaving, setIsSaving] = useState(false)
+  // After a save that splits a double-pole, offer to log a split event on both
+  // breakers. Holds the two breaker ids until the user logs or skips.
+  const [pendingSplit, setPendingSplit] = useState<{ a: string; b: string } | null>(null)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -102,6 +106,11 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
 
   const handleSave = async () => {
     setIsSaving(true)
+    // A split = previously linked to a breaker, now no longer linked to it.
+    const splitFromId =
+      originalValues.linkedBreakerId && originalValues.linkedBreakerId !== linkedBreakerId
+        ? originalValues.linkedBreakerId
+        : null
     try {
       // Update breaker properties
       await window.electronAPI.breakers.update(breaker.id, {
@@ -205,6 +214,14 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
 
       // Persist staged tag attach/detach changes
       await tagSelection.persist()
+
+      // If this save split a double-pole, offer to log a split event on both
+      // halves before closing. Otherwise close normally.
+      if (splitFromId) {
+        setIsSaving(false)
+        setPendingSplit({ a: breaker.id, b: splitFromId })
+        return
+      }
 
       onClose()
     } catch (error) {
@@ -801,6 +818,25 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         </div>
       )}
       </div>
+
+      {/* Split-double-pole prompt: prefilled event on both former halves */}
+      {pendingSplit && panel && (
+        <AddEventModal
+          propertyId={panel.property_id}
+          panelId={panelId}
+          title="Log this split?"
+          initialNewTypeName="Split double-pole"
+          initialNotes="Split from double-pole into independent breakers."
+          initialTargets={[
+            { target_type: 'breaker', target_id: pendingSplit.a },
+            { target_type: 'breaker', target_id: pendingSplit.b }
+          ]}
+          onClose={() => {
+            setPendingSplit(null)
+            onClose()
+          }}
+        />
+      )}
     </>
   )
 }

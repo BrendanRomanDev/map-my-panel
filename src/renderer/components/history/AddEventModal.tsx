@@ -9,8 +9,13 @@ import { TargetPicker } from './TargetPicker'
 interface AddEventModalProps {
   propertyId: string
   panelId: string
-  // Pre-checked target the modal was opened from
-  initialTarget: { target_type: TargetRef['target_type']; target_id: string; label: string }
+  // Pre-checked targets the modal was opened from. Usually one, but a
+  // double-pole breaker passes both halves so the event is recorded on both.
+  initialTargets: TargetRef[]
+  // Optional prefills (e.g. the split-double-pole prompt)
+  title?: string
+  initialNewTypeName?: string
+  initialNotes?: string
   onClose: () => void
 }
 
@@ -21,19 +26,33 @@ function todayYmd(): string {
   return `${d.getFullYear()}-${mm}-${dd}`
 }
 
-export function AddEventModal({ propertyId, panelId, initialTarget, onClose }: AddEventModalProps) {
+export function AddEventModal({
+  propertyId,
+  panelId,
+  initialTargets,
+  title = 'Add History Event',
+  initialNewTypeName = '',
+  initialNotes = '',
+  onClose
+}: AddEventModalProps) {
   const queryClient = useQueryClient()
   const { data: eventTypes } = useEventTypes(propertyId)
   const { data: tags } = useTags(propertyId)
 
-  const [eventTypeId, setEventTypeId] = useState<string>('')
-  const [newTypeName, setNewTypeName] = useState('')
+  // If a prefilled type name already exists as a type, select it; else stage
+  // it as a new type to create.
+  const matchingType = (eventTypes || []).find(
+    t => t.name.toLowerCase() === initialNewTypeName.trim().toLowerCase()
+  )
+
+  const [eventTypeId, setEventTypeId] = useState<string>(matchingType?.id || '')
+  const [newTypeName, setNewTypeName] = useState(matchingType ? '' : initialNewTypeName)
   const [occurredOn, setOccurredOn] = useState(todayYmd())
   const [tagId, setTagId] = useState<string>('')
-  const [notes, setNotes] = useState('')
-  const [targets, setTargets] = useState<TargetRef[]>([
-    { target_type: initialTarget.target_type, target_id: initialTarget.target_id }
-  ])
+  const [notes, setNotes] = useState(initialNotes)
+  const [targets, setTargets] = useState<TargetRef[]>(
+    initialTargets.map(t => ({ target_type: t.target_type, target_id: t.target_id }))
+  )
   const [isSaving, setIsSaving] = useState(false)
 
   const handleSave = async () => {
@@ -78,7 +97,7 @@ export function AddEventModal({ propertyId, panelId, initialTarget, onClose }: A
   return (
     <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
       <div className="bg-background border border-border rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-auto">
-        <h3 className="text-lg font-bold mb-4">Add History Event</h3>
+        <h3 className="text-lg font-bold mb-4">{title}</h3>
 
         <div className="space-y-4">
           {/* Event Type */}

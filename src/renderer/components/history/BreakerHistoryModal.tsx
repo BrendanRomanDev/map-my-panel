@@ -42,6 +42,12 @@ export function BreakerHistoryModal({ breaker, onClose }: BreakerHistoryModalPro
             propertyId={panel.property_id}
             panelId={breaker.panel_id}
             targetLabel={label}
+            // Double-pole: pre-check the linked half so events apply to both.
+            extraInitialTargets={
+              breaker.breaker_type === 'double-pole' && breaker.linked_breaker_id
+                ? [{ target_type: 'breaker', target_id: breaker.linked_breaker_id }]
+                : []
+            }
           />
         )}
       </div>

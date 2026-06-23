@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { TargetType, HistoryEventWithDetails } from '@shared/types'
+import type { TargetType, TargetRef, HistoryEventWithDetails } from '@shared/types'
 import { useHistoryForTarget, useBreakerHistoryRollup } from '../../hooks/useHistory'
 import { HistoryTimeline } from './HistoryTimeline'
 import { AddEventModal } from './AddEventModal'
@@ -12,6 +12,9 @@ interface HistorySectionProps {
   panelId: string
   // Human label for the current target, pre-fills the Add modal target list.
   targetLabel: string
+  // Extra targets to pre-check when adding an event (besides this target).
+  // Used for double-pole breakers to pre-check the linked half.
+  extraInitialTargets?: TargetRef[]
   // Compact mode (drawer): cap the list and show a "View full history" link.
   compact?: boolean
   onViewFull?: () => void
@@ -23,6 +26,7 @@ export function HistorySection({
   propertyId,
   panelId,
   targetLabel,
+  extraInitialTargets = [],
   compact = false,
   onViewFull
 }: HistorySectionProps) {
@@ -73,7 +77,7 @@ export function HistorySection({
         <AddEventModal
           propertyId={propertyId}
           panelId={panelId}
-          initialTarget={{ target_type: targetType, target_id: targetId, label: targetLabel }}
+          initialTargets={[{ target_type: targetType, target_id: targetId }, ...extraInitialTargets]}
           onClose={() => setIsAdding(false)}
         />
       )}
