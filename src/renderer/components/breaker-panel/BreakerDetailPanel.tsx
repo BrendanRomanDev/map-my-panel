@@ -68,6 +68,16 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     }
   }, [breaker, entities])
 
+  // Close the drawer on Escape, matching the modal convention used elsewhere.
+  useEffect(() => {
+    if (!breaker) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [breaker, onClose])
+
   if (!breaker) return null
 
   // Detect if anything has changed
@@ -421,8 +431,16 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     : null
 
   return (
-    <div className="fixed inset-y-0 right-0 w-96 bg-background border-l border-border shadow-lg flex flex-col">
-      {/* Header */}
+    <>
+      {/* Scrim — sits below the drawer, above the panel grid. Click to close. */}
+      <div
+        className="fixed inset-0 bg-black/70 z-40"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {/* Drawer — z-50 matches the standard modal layer so nested confirms (z-[60]) render above. */}
+      <div className="fixed inset-y-0 right-0 w-96 bg-background border-l border-border shadow-lg flex flex-col z-50">
+        {/* Header */}
       <div className="flex-shrink-0 p-6 border-b border-border">
         <div className="flex items-center justify-between">
           <div>
@@ -758,6 +776,7 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </>
   )
 }
