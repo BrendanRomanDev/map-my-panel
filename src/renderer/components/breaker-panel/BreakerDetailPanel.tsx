@@ -5,6 +5,7 @@ import { useEntitiesByBreaker, useEntities } from '../../hooks/useEntities'
 import { useTagSelection } from '../../hooks/useTags'
 import { AssignEntitiesModal } from './AssignEntitiesModal'
 import { TagPicker } from '../tags/TagPicker'
+import { HistorySection } from '../history/HistorySection'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import type { BreakerWithEntityCount } from '@shared/types'
 
@@ -486,6 +487,17 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
               onChange={tagSelection.setSelectedTagIds}
             />
           </div>
+        )}
+
+        {/* History */}
+        {panel && !breaker.is_container && (
+          <HistorySection
+            targetType="breaker"
+            targetId={breaker.id}
+            propertyId={panel.property_id}
+            panelId={panelId}
+            targetLabel={`Breaker ${breaker.position}${breaker.position_slot || ''}`}
+          />
         )}
 
         {/* Form */}
