@@ -6,6 +6,7 @@ import { useTagSelection } from '../../hooks/useTags'
 import { AssignEntitiesModal } from './AssignEntitiesModal'
 import { TagPicker } from '../tags/TagPicker'
 import { logBreakerLinkChange, mergeBreakerHistories } from '../../lib/historyActions'
+import { planLinkChange, isLinkError, type LinkPlan } from '../../lib/breakerLinking'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import type { BreakerWithEntityCount } from '@shared/types'
 
@@ -35,16 +36,19 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
   const [linkedBreakerId, setLinkedBreakerId] = useState<string | null>(null)
   const [assignedEntityIds, setAssignedEntityIds] = useState<Set<string>>(new Set())
   const [isSaving, setIsSaving] = useState(false)
-  // Opt-in: when splitting (linked → not linked), log a marker event on both.
-  const [logSplit, setLogSplit] = useState(false)
-  // Opt-in checkboxes for the link/convert confirm dialog.
-  const [logCombine, setLogCombine] = useState(false)
-  const [mergeOnLink, setMergeOnLink] = useState(false)
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [showConvertConfirm, setShowConvertConfirm] = useState(false)
-  const [breakerToConvert, setBreakerToConvert] = useState<string | null>(null)
+
+  // Staged double-pole link change (committed on Save Changes, not on dialog OK).
+  // pendingLinkPlan holds the planned breaker updates + warnings; the dialog
+  // collects the opt-in choices. Null when no link change is pending.
+  const [pendingLinkPlan, setPendingLinkPlan] = useState<LinkPlan | null>(null)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
+  const [linkError, setLinkError] = useState<string | null>(null)
+  const [logLinkChange, setLogLinkChange] = useState(false)
+  const [mergeOnLink, setMergeOnLink] = useState(false)
+  const [makeSelfSingle, setMakeSelfSingle] = useState(false)
 
   // Track original values for dirty detection
   const [originalValues, setOriginalValues] = useState({
@@ -104,64 +108,59 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     linkedBreakerId !== originalValues.linkedBreakerId ||
     assignedEntityIds.size !== originalValues.entityIds.size ||
     ![...assignedEntityIds].every(id => originalValues.entityIds.has(id)) ||
-    tagSelection.hasChanges
+    tagSelection.hasChanges ||
+    !!pendingLinkPlan
 
   const handleSave = async () => {
     setIsSaving(true)
-    // A split = previously linked to a breaker, now no longer linked to it.
-    const splitFromId =
-      originalValues.linkedBreakerId && originalValues.linkedBreakerId !== linkedBreakerId
-        ? originalValues.linkedBreakerId
-        : null
+    // The staged link plan (if any) is the source of truth for breaker_type /
+    // linked_breaker_id across self + partner(s).
+    const plan = pendingLinkPlan
+    const selfUpdate = plan?.updates.find(u => u.id === breaker.id)
     try {
-      // Update breaker properties
+      // Update this breaker's own fields. If a link plan exists, it dictates
+      // breaker_type + linked_breaker_id; otherwise use the form values.
       await window.electronAPI.breakers.update(breaker.id, {
         label: label || null,
         amperage,
-        breaker_type: breakerType,
+        breaker_type: selfUpdate ? selfUpdate.breaker_type : breakerType,
         status,
         is_powered: isPowered,
-        linked_breaker_id: linkedBreakerId
+        linked_breaker_id: selfUpdate ? selfUpdate.linked_breaker_id : linkedBreakerId
       })
 
-      // Sync properties to linked breaker (for double-pole breakers)
-      // Status, power state, and amperage must match between linked breakers
-      if (linkedBreakerId && breakerType === 'double-pole') {
-        await window.electronAPI.breakers.update(linkedBreakerId, {
+      // Apply the plan's updates to the OTHER breakers (old partner, new partner).
+      if (plan) {
+        for (const u of plan.updates) {
+          if (u.id === breaker.id) continue
+          await window.electronAPI.breakers.update(u.id, {
+            breaker_type: u.breaker_type,
+            linked_breaker_id: u.linked_breaker_id
+          })
+        }
+      }
+
+      // Sync shared properties to the (final) linked partner for a double-pole.
+      const finalLinkedId = selfUpdate ? selfUpdate.linked_breaker_id : linkedBreakerId
+      if (finalLinkedId && (selfUpdate ? selfUpdate.breaker_type : breakerType) === 'double-pole') {
+        await window.electronAPI.breakers.update(finalLinkedId, {
           amperage,
           status,
           is_powered: isPowered
         })
       }
 
-      // If changing from double-pole to single-pole, unassign all entities from this breaker
-      if (originalValues.breakerType === 'double-pole' && breakerType === 'single-pole') {
-        // Get all entities currently assigned to this breaker
+      // If this breaker is dropping to single-pole, unassign its entities.
+      const becomingSingle = selfUpdate
+        ? selfUpdate.breaker_type === 'single-pole' && originalValues.breakerType === 'double-pole'
+        : originalValues.breakerType === 'double-pole' && breakerType === 'single-pole'
+      if (becomingSingle) {
         const entitiesToUnassign = allEntities?.filter(e => e.breaker_ids.includes(breaker.id)) || []
         for (const entity of entitiesToUnassign) {
-          // Remove this breaker from the entity's breaker_ids
           const newBreakerIds = entity.breaker_ids.filter(id => id !== breaker.id)
           await window.electronAPI.entities.update(entity.id, { breaker_ids: newBreakerIds })
         }
-        // Clear the local assignedEntityIds since we unassigned everything
         setAssignedEntityIds(new Set())
-      }
-
-      // Handle bidirectional linking for double-pole breakers
-      if (linkedBreakerId !== originalValues.linkedBreakerId) {
-        // If previously linked to a different breaker, clear that link
-        if (originalValues.linkedBreakerId && originalValues.linkedBreakerId !== linkedBreakerId) {
-          await window.electronAPI.breakers.update(originalValues.linkedBreakerId, {
-            linked_breaker_id: null
-          })
-        }
-
-        // If now linked to a new breaker, update it to link back
-        if (linkedBreakerId) {
-          await window.electronAPI.breakers.update(linkedBreakerId, {
-            linked_breaker_id: breaker.id
-          })
-        }
       }
 
       // Update entity assignments
@@ -217,16 +216,31 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
       // Persist staged tag attach/detach changes
       await tagSelection.persist()
 
-      // If this save split a double-pole and the user opted in, log a marker
-      // event on both former halves (today). Past history stays untouched.
-      if (splitFromId && logSplit) {
-        await logBreakerLinkChange(queryClient, {
-          propertyId: panel!.property_id,
-          breakerAId: breaker.id,
-          breakerBId: splitFromId,
-          kind: 'split'
-        })
+      // Apply the link plan's opt-in history actions (if a link change was staged).
+      if (plan && panel) {
+        // Opt-in: merge prior histories of the newly-formed pair.
+        if (mergeOnLink && plan.newPartnerId) {
+          await mergeBreakerHistories(queryClient, breaker.id, plan.newPartnerId)
+        }
+        // Opt-in: one "log this change" event covering the transition, on the
+        // breakers involved (self + new partner if combining, else self + old).
+        if (logLinkChange) {
+          const otherId = plan.newPartnerId || plan.abandonedPartnerId
+          if (otherId) {
+            await logBreakerLinkChange(queryClient, {
+              propertyId: panel.property_id,
+              breakerAId: breaker.id,
+              breakerBId: otherId,
+              kind: plan.newPartnerId ? 'combined' : 'split'
+            })
+          }
+        }
+        // Refresh breaker grid so type/link changes show on the cards.
+        queryClient.invalidateQueries({ queryKey: queryKeys.breakers.byPanel(panelId) })
       }
+
+      // Clear the staged plan now that it's committed.
+      setPendingLinkPlan(null)
 
       onClose()
     } catch (error) {
@@ -303,90 +317,54 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     setIsAssignModalOpen(false)
   }
 
+  // Plan a link change (link/unlink/re-link). Validates and either surfaces an
+  // error or stages a plan + opens the confirm dialog. Nothing persists here —
+  // the actual breaker updates happen on Save Changes.
   const handleLinkedBreakerChange = (selectedBreakerId: string) => {
-    if (!selectedBreakerId) {
-      // User selected "Not linked"
-      setLinkedBreakerId(null)
+    const targetId = selectedBreakerId || null
+    const result = planLinkChange(breaker, targetId, false, allBreakers || [])
+
+    if (isLinkError(result)) {
+      setLinkError(result.error)
       return
     }
 
-    // Find the selected breaker
-    const selectedBreaker = allBreakers?.find(b => b.id === selectedBreakerId)
-    if (!selectedBreaker) return
-
-    // Check if the selected breaker is double-pole
-    if (selectedBreaker.breaker_type !== 'double-pole') {
-      // Show confirmation dialog to convert it
-      setBreakerToConvert(selectedBreakerId)
-      setShowConvertConfirm(true)
-    } else {
-      // Already double-pole, just set the link
-      setLinkedBreakerId(selectedBreakerId)
+    // No-op (re-selected the same partner)
+    if (result.updates.length === 0) {
+      setLinkedBreakerId(targetId)
+      return
     }
-  }
 
-  const handleConfirmConvert = async () => {
-    if (!breakerToConvert) return
-
-    try {
-      // Convert the breaker to double-pole and link it back to the current breaker
-      // Also sync properties (amperage, status, power state) to match current breaker
-      await window.electronAPI.breakers.update(breakerToConvert, {
-        breaker_type: 'double-pole',
-        linked_breaker_id: breaker.id,
-        amperage,
-        status,
-        is_powered: isPowered
-      })
-
-      // Update the current breaker to link to the converted breaker
-      await window.electronAPI.breakers.update(breaker.id, {
-        linked_breaker_id: breakerToConvert
-      })
-
-      // Set the link in local state
-      setLinkedBreakerId(breakerToConvert)
-
-      // Update original values since we already saved the link to the database
-      setOriginalValues(prev => ({
-        ...prev,
-        linkedBreakerId: breakerToConvert
-      }))
-
-      // Refresh breakers data immediately (refetch instead of invalidate to ensure data is fresh)
-      await queryClient.refetchQueries({ queryKey: queryKeys.breakers.byPanel(panelId) })
-
-      // Opt-in: merge prior histories (cross-link existing events to both).
-      if (mergeOnLink && panel) {
-        await mergeBreakerHistories(queryClient, breaker.id, breakerToConvert)
-      }
-
-      // Opt-in: log a "combined into double-pole" marker on both (today).
-      if (logCombine && panel) {
-        await logBreakerLinkChange(queryClient, {
-          propertyId: panel.property_id,
-          breakerAId: breaker.id,
-          breakerBId: breakerToConvert,
-          kind: 'combined'
-        })
-      }
-
-      // Close dialog
-      setShowConvertConfirm(false)
-      setBreakerToConvert(null)
-      setLogCombine(false)
-      setMergeOnLink(false)
-    } catch (error) {
-      console.error('Failed to convert breaker to double-pole:', error)
-      alert('Failed to convert breaker to double-pole')
-    }
-  }
-
-  const handleCancelConvert = () => {
-    setShowConvertConfirm(false)
-    setBreakerToConvert(null)
-    setLogCombine(false)
+    // Stage it: reflect the new link locally and remember the plan + reset opts.
+    setLinkedBreakerId(targetId)
+    setMakeSelfSingle(false)
     setMergeOnLink(false)
+    setLogLinkChange(false)
+    setPendingLinkPlan(result)
+    setLinkDialogOpen(true)
+  }
+
+  // Recompute the plan when the user toggles "also make this breaker single-pole"
+  // (only relevant while unlinking).
+  const recomputePlanWithSelfSingle = (next: boolean) => {
+    setMakeSelfSingle(next)
+    const result = planLinkChange(breaker, linkedBreakerId, next, allBreakers || [])
+    if (!isLinkError(result)) setPendingLinkPlan(result)
+  }
+
+  const handleCancelLinkChange = () => {
+    // Revert the staged link back to what it was; discard the plan.
+    setLinkedBreakerId(originalValues.linkedBreakerId)
+    setPendingLinkPlan(null)
+    setLinkDialogOpen(false)
+    setMakeSelfSingle(false)
+    setMergeOnLink(false)
+    setLogLinkChange(false)
+  }
+
+  const handleConfirmLinkChange = () => {
+    // Just close the dialog — the plan stays staged and commits on Save.
+    setLinkDialogOpen(false)
   }
 
   const handleDeleteTandem = async () => {
@@ -655,25 +633,11 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
                       {linkedBreaker.position_slot}
                     </p>
                   )}
-                  {/* Pending split: was linked, now set to "Not linked" */}
-                  {originalValues.linkedBreakerId &&
-                    originalValues.linkedBreakerId !== linkedBreakerId && (
-                      <label className="flex items-start gap-2 text-xs mt-2">
-                        <input
-                          type="checkbox"
-                          checked={logSplit}
-                          onChange={e => setLogSplit(e.target.checked)}
-                          className="mt-0.5"
-                        />
-                        <span>
-                          Log this split as a change event (today)
-                          <span className="block text-muted-foreground">
-                            Adds a "Split double-pole" entry to both. Past history is kept on each
-                            either way.
-                          </span>
-                        </span>
-                      </label>
-                    )}
+                  {pendingLinkPlan && !linkDialogOpen && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                      Link change staged — applies when you Save Changes.
+                    </p>
+                  )}
                 </div>
               )}
             </>
@@ -829,66 +793,110 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         </div>
       )}
 
-      {/* Convert to Double-Pole Confirmation Modal */}
-      {showConvertConfirm && breakerToConvert && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
+      {/* Link error (target already paired) */}
+      {linkError && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[70]">
           <div className="bg-background border border-border rounded-lg shadow-lg w-[400px] p-6">
-            <h3 className="text-lg font-bold mb-2">Convert Breaker to Double-Pole?</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              The breaker you're trying to link to (<strong>
-                {allBreakers?.find(b => b.id === breakerToConvert)?.position}
-                {allBreakers?.find(b => b.id === breakerToConvert)?.position_slot}
-              </strong>) is currently a single-pole breaker.
-            </p>
-            <p className="text-sm text-muted-foreground mb-4">
-              Would you like to convert it to a double-pole breaker and create the link?
-            </p>
+            <h3 className="text-lg font-bold mb-2">Can't link these breakers</h3>
+            <p className="text-sm text-muted-foreground mb-4">{linkError}</p>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setLinkError(null)}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {/* Opt-in history actions (off by default — safe for initial setup) */}
+      {/* Staged link-change dialog (collects opts; commits on Save Changes) */}
+      {linkDialogOpen && pendingLinkPlan && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
+          <div className="bg-background border border-border rounded-lg shadow-lg w-[420px] p-6">
+            <h3 className="text-lg font-bold mb-2">
+              {linkedBreakerId ? 'Link these breakers?' : 'Unlink this breaker?'}
+            </h3>
+
+            {pendingLinkPlan.warnings.length > 0 && (
+              <ul className="text-sm text-muted-foreground mb-3 list-disc pl-5 space-y-1">
+                {pendingLinkPlan.warnings.map((w, i) => (
+                  <li key={i}>{w}</li>
+                ))}
+              </ul>
+            )}
+
             <div className="space-y-2 mb-4 border-t border-border pt-3">
-              <label className="flex items-start gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={mergeOnLink}
-                  onChange={e => setMergeOnLink(e.target.checked)}
-                  className="mt-0.5"
-                />
-                <span>
-                  Merge their prior history
-                  <span className="block text-xs text-muted-foreground">
-                    Each breaker's existing events become shared by both. Leave off to keep past
-                    history separate.
+              {/* Unlink-only: also drop the edited breaker to single-pole */}
+              {!linkedBreakerId && (
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={makeSelfSingle}
+                    onChange={e => recomputePlanWithSelfSingle(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Also make this breaker single-pole
+                    <span className="block text-xs text-muted-foreground">
+                      Leave off if you plan to link it to a different breaker.
+                    </span>
                   </span>
-                </span>
-              </label>
+                </label>
+              )}
+
+              {/* Link-only: merge prior histories of the new pair */}
+              {pendingLinkPlan.newPartnerId && (
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={mergeOnLink}
+                    onChange={e => setMergeOnLink(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Merge their prior history
+                    <span className="block text-xs text-muted-foreground">
+                      Existing events become shared by both. Off = keep past separate.
+                    </span>
+                  </span>
+                </label>
+              )}
+
               <label className="flex items-start gap-2 text-sm">
                 <input
                   type="checkbox"
-                  checked={logCombine}
-                  onChange={e => setLogCombine(e.target.checked)}
+                  checked={logLinkChange}
+                  onChange={e => setLogLinkChange(e.target.checked)}
                   className="mt-0.5"
                 />
                 <span>
                   Log this as a change event (today)
                   <span className="block text-xs text-muted-foreground">
-                    Adds a "Combined into double-pole" entry. Skip during initial setup.
+                    Adds a "{linkedBreakerId ? 'Combined into' : 'Split'} double-pole" entry. Skip
+                    during initial setup.
                   </span>
                 </span>
               </label>
             </div>
 
+            <p className="text-xs text-muted-foreground mb-4">
+              Nothing is saved until you click <strong>Save Changes</strong>.
+            </p>
+
             <div className="flex gap-2 justify-end">
               <button
-                onClick={handleCancelConvert}
+                onClick={handleCancelLinkChange}
                 className="px-4 py-2 border border-border rounded-md hover:bg-muted"
               >
                 Cancel
               </button>
               <button
-                onClick={handleConfirmConvert}
+                onClick={handleConfirmLinkChange}
                 className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
               >
-                Convert to Double-Pole
+                OK
               </button>
             </div>
           </div>
