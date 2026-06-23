@@ -9,6 +9,10 @@ This spec defines the UI/interaction design for the Tags and History Event featu
 
 ---
 
+## Core Tenet: No auto-persist inside save/cancel hosts
+
+Any change made inside a modal or drawer that has a **Save Changes** action MUST stay staged in local state and only persist when Save runs. Clicking the scrim, Escape, or Cancel discards staged changes. Auto-persisting on selection undermines the Save action and breaks the user's mental model — they may "click out to cancel" and find the change applied anyway. This applies to tag attach/detach (and will apply to history-event editing). Creating a new tag *definition* in the library is the one exception (a library action, persisted immediately), but **attaching** that tag to the target is still staged.
+
 ## Design Decisions (confirmed with Brendan)
 
 | Decision | Choice |

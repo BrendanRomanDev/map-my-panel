@@ -5,6 +5,7 @@ import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import { RoomSelector } from '../shared/RoomSelector'
 import { TypeSelector } from '../shared/TypeSelector'
 import { TagPicker } from '../tags/TagPicker'
+import { useTagSelection } from '../../hooks/useTags'
 import type { Entity } from '@shared/types'
 
 interface EntityEditModalProps {
@@ -21,6 +22,7 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
     queryFn: () => window.electronAPI.panels.findById(entity!.panel_id),
     enabled: !!entity?.panel_id
   })
+  const tagSelection = useTagSelection('entity', entity?.id || null)
 
   const [name, setName] = useState('')
   const [entityType, setEntityType] = useState<string>('outlet')
@@ -140,6 +142,9 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
         // Log but don't block - entity was updated successfully
         console.error('Post-update operations failed:', postError)
       }
+
+      // Persist staged tag attach/detach changes
+      await tagSelection.persist()
 
       onClose()
     } catch (error) {
@@ -262,7 +267,11 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
             {panel && (
               <div>
                 <label className="block text-sm font-medium mb-2">Tags</label>
-                <TagPicker targetType="entity" targetId={entity.id} propertyId={panel.property_id} />
+                <TagPicker
+                  propertyId={panel.property_id}
+                  selectedTagIds={tagSelection.selectedTagIds}
+                  onChange={tagSelection.setSelectedTagIds}
+                />
               </div>
             )}
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useBreakers } from '../../hooks/useBreakers'
 import { useEntitiesByBreaker, useEntities } from '../../hooks/useEntities'
+import { useTagSelection } from '../../hooks/useTags'
 import { AssignEntitiesModal } from './AssignEntitiesModal'
 import { TagPicker } from '../tags/TagPicker'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
@@ -23,6 +24,7 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     queryFn: () => window.electronAPI.panels.findById(panelId),
     enabled: !!panelId
   })
+  const tagSelection = useTagSelection('breaker', breaker?.id || null)
 
   const [label, setLabel] = useState('')
   const [amperage, setAmperage] = useState(15)
@@ -95,7 +97,8 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
     isPowered !== originalValues.isPowered ||
     linkedBreakerId !== originalValues.linkedBreakerId ||
     assignedEntityIds.size !== originalValues.entityIds.size ||
-    ![...assignedEntityIds].every(id => originalValues.entityIds.has(id))
+    ![...assignedEntityIds].every(id => originalValues.entityIds.has(id)) ||
+    tagSelection.hasChanges
 
   const handleSave = async () => {
     setIsSaving(true)
@@ -199,6 +202,9 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
           queryClient.invalidateQueries({ queryKey })
         })
       }
+
+      // Persist staged tag attach/detach changes
+      await tagSelection.persist()
 
       onClose()
     } catch (error) {
@@ -474,7 +480,11 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
         {panel && !breaker.is_container && (
           <div>
             <label className="block text-sm font-medium mb-2">Tags</label>
-            <TagPicker targetType="breaker" targetId={breaker.id} propertyId={panel.property_id} />
+            <TagPicker
+              propertyId={panel.property_id}
+              selectedTagIds={tagSelection.selectedTagIds}
+              onChange={tagSelection.setSelectedTagIds}
+            />
           </div>
         )}
 

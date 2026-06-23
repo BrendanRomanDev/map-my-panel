@@ -1,60 +1,56 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { TargetType } from '@shared/types'
-import { useTags, useTagsForTarget } from '../../hooks/useTags'
+import { useTags } from '../../hooks/useTags'
 import { queryKeys } from '../../lib/queryKeys'
 import { TagBadge } from './TagBadge'
 
 interface TagPickerProps {
-  targetType: TargetType
-  targetId: string
   propertyId: string
+  // Controlled: the parent owns the pending selection so attach/detach only
+  // persist when the host modal/drawer's "Save Changes" runs. Selecting here
+  // does NOT hit the database — it mutates local state via onChange.
+  selectedTagIds: string[]
+  onChange: (tagIds: string[]) => void
 }
 
-// Inline tag editor for a target: shows attached tags (removable), lets the
-// user attach existing tags, and create a new tag on the fly.
-export function TagPicker({ targetType, targetId, propertyId }: TagPickerProps) {
+export function TagPicker({ propertyId, selectedTagIds, onChange }: TagPickerProps) {
   const queryClient = useQueryClient()
-  const { data: attachedTags } = useTagsForTarget(targetType, targetId)
   const { data: allTags } = useTags(propertyId)
   const [newTagName, setNewTagName] = useState('')
   const [isAdding, setIsAdding] = useState(false)
 
-  const attachedIds = new Set((attachedTags || []).map(t => t.id))
-  const available = (allTags || []).filter(t => !attachedIds.has(t.id))
+  const selectedSet = new Set(selectedTagIds)
+  const selectedTags = (allTags || []).filter(t => selectedSet.has(t.id))
+  const available = (allTags || []).filter(t => !selectedSet.has(t.id))
 
-  const invalidate = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.tags.byTarget(targetType, targetId) })
-    queryClient.invalidateQueries({ queryKey: queryKeys.tags.byProperty(propertyId) })
+  const handleAttach = (tagId: string) => {
+    onChange([...selectedTagIds, tagId])
   }
 
-  const handleAttach = async (tagId: string) => {
-    await window.electronAPI.tags.attach(tagId, targetType, targetId)
-    invalidate()
+  const handleDetach = (tagId: string) => {
+    onChange(selectedTagIds.filter(id => id !== tagId))
   }
 
-  const handleDetach = async (tagId: string) => {
-    await window.electronAPI.tags.detach(tagId, targetType, targetId)
-    invalidate()
-  }
-
-  const handleCreateAndAttach = async () => {
+  // Creating a new tag definition is a library action (like adding a custom
+  // entity type), so it persists immediately. Attaching it to THIS target is
+  // still staged locally and only saved on the host's Save Changes.
+  const handleCreateAndStage = async () => {
     const name = newTagName.trim()
     if (!name) return
     const tag = await window.electronAPI.tags.create({ property_id: propertyId, name })
-    await window.electronAPI.tags.attach(tag.id, targetType, targetId)
+    queryClient.invalidateQueries({ queryKey: queryKeys.tags.byProperty(propertyId) })
+    onChange([...selectedTagIds, tag.id])
     setNewTagName('')
     setIsAdding(false)
-    invalidate()
   }
 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-1">
-        {(attachedTags || []).map(tag => (
+        {selectedTags.map(tag => (
           <TagBadge key={tag.id} tag={tag} onRemove={() => handleDetach(tag.id)} />
         ))}
-        {(!attachedTags || attachedTags.length === 0) && (
+        {selectedTags.length === 0 && (
           <span className="text-xs text-muted-foreground">No tags yet</span>
         )}
       </div>
@@ -88,14 +84,14 @@ export function TagPicker({ targetType, targetId, propertyId }: TagPickerProps) 
               value={newTagName}
               onChange={e => setNewTagName(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter') handleCreateAndAttach()
+                if (e.key === 'Enter') handleCreateAndStage()
               }}
               placeholder="New tag name..."
               className="flex-1 text-xs px-2 py-1 rounded border border-border bg-background"
               autoFocus
             />
             <button
-              onClick={handleCreateAndAttach}
+              onClick={handleCreateAndStage}
               disabled={!newTagName.trim()}
               className="text-xs px-2 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50"
             >
