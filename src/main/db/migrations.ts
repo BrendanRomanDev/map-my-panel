@@ -472,16 +472,17 @@ export function runMigrations(database: Database.Database): void {
       CREATE UNIQUE INDEX idx_tags_name_global ON tags(name COLLATE NOCASE)
         WHERE property_id IS NULL;
 
-      -- Seed default tags for every existing property (additive; existing data untouched)
-      INSERT INTO tags (id, property_id, name, created_at, updated_at)
-      SELECT 'tag_' || hex(randomblob(8)), p.id, t.name, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      -- Seed default tags (with icon/color/condense) for every existing
+      -- property (additive; existing data untouched). Defaults are editable.
+      INSERT INTO tags (id, property_id, name, icon, color, condense, created_at, updated_at)
+      SELECT 'tag_' || hex(randomblob(8)), p.id, t.name, t.icon, t.color, t.condense, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       FROM properties p
       CROSS JOIN (
-        SELECT 'No Ground Wire' AS name
-        UNION ALL SELECT 'Grounded to Box (Self-Grounding)'
-        UNION ALL SELECT 'Reverse Polarity'
-        UNION ALL SELECT 'GFCI Protected'
-        UNION ALL SELECT 'AFCI Protected'
+        SELECT 'No Ground Wire' AS name, '🚫' AS icon, 'red' AS color, 1 AS condense
+        UNION ALL SELECT 'Grounded to Box (Self-Grounding)', '🔩', 'amber', 1
+        UNION ALL SELECT 'Reverse Polarity', '⚡', 'red', 1
+        UNION ALL SELECT 'GFCI Protected', '🛡️', 'green', 0
+        UNION ALL SELECT 'AFCI Protected', '🛡️', 'blue', 0
       ) t;
     `)
 
@@ -566,5 +567,37 @@ export function runMigrations(database: Database.Database): void {
 
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('010_add_history')
     console.log('Migration 010_add_history completed')
+  }
+
+  // Migration 011: Backfill icons/colors/condense onto default tags seeded
+  // by migration 009 before defaults carried visual metadata. Only touches
+  // rows that still match the default name AND have no icon yet, so any user
+  // edits are preserved.
+  if (!appliedMigrations.includes('011_default_tag_icons')) {
+    console.log('Running migration: 011_default_tag_icons')
+
+    const defaults: Array<[string, string, string, number]> = [
+      ['No Ground Wire', '🚫', 'red', 1],
+      ['Grounded to Box (Self-Grounding)', '🔩', 'amber', 1],
+      ['Reverse Polarity', '⚡', 'red', 1],
+      ['GFCI Protected', '🛡️', 'green', 0],
+      ['AFCI Protected', '🛡️', 'blue', 0]
+    ]
+
+    const update = database.prepare(`
+      UPDATE tags
+      SET icon = ?, color = ?, condense = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE name = ? AND icon IS NULL
+    `)
+
+    const runAll = database.transaction(() => {
+      for (const [name, icon, color, condense] of defaults) {
+        update.run(icon, color, condense, name)
+      }
+    })
+    runAll()
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('011_default_tag_icons')
+    console.log('Migration 011_default_tag_icons completed')
   }
 }

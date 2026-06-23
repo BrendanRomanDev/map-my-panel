@@ -1,4 +1,5 @@
 import type { Tag } from '@shared/types'
+import { tagColorClasses } from './tagColors'
 
 interface TagBadgeProps {
   tag: Tag
@@ -15,7 +16,7 @@ export function TagBadge({ tag, condensed, onRemove }: TagBadgeProps) {
   return (
     <span
       title={tooltip}
-      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-secondary text-secondary-foreground"
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${tagColorClasses(tag.color)}`}
     >
       {tag.icon && <span aria-hidden="true">{tag.icon}</span>}
       {!showIconOnly && <span className="truncate max-w-[10rem]">{tag.name}</span>}

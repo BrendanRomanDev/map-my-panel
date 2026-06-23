@@ -136,4 +136,29 @@ describe('TagRepository', () => {
       .filter(t => t.name === 'No Ground Wire')
     expect(groundTags).toHaveLength(1)
   })
+
+  it('seeded defaults carry icon, color, and condense', () => {
+    repo.seedDefaultsForProperty(propertyId)
+    const noGround = repo.listForProperty(propertyId).find(t => t.name === 'No Ground Wire')!
+    expect(noGround.icon).toBe('🚫')
+    expect(noGround.color).toBe('red')
+    expect(noGround.condense).toBe(true)
+
+    const gfci = repo.listForProperty(propertyId).find(t => t.name === 'GFCI Protected')!
+    expect(gfci.condense).toBe(false)
+  })
+
+  it('update can change icon, color, description, and condense', () => {
+    const tag = repo.create({ property_id: propertyId, name: 'Editable' })
+    const updated = repo.update(tag.id, {
+      icon: '🔧',
+      color: 'purple',
+      description: 'a note',
+      condense: true
+    })!
+    expect(updated.icon).toBe('🔧')
+    expect(updated.color).toBe('purple')
+    expect(updated.description).toBe('a note')
+    expect(updated.condense).toBe(true)
+  })
 })

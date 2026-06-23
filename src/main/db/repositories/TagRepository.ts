@@ -157,26 +157,32 @@ export class TagRepository extends BaseRepository<Tag, CreateTagInput, UpdateTag
   // Default tags seeded for a newly created property. The migration backfills
   // properties that existed at migration time; this covers properties created
   // afterward (called from PropertyRepository.create). Idempotent per name.
-  static readonly DEFAULT_TAG_NAMES = [
-    'No Ground Wire',
-    'Grounded to Box (Self-Grounding)',
-    'Reverse Polarity',
-    'GFCI Protected',
-    'AFCI Protected'
+  // Shape: [name, icon, color, condense]. Defaults are editable by the user.
+  static readonly DEFAULT_TAGS: Array<{
+    name: string
+    icon: string
+    color: string
+    condense: boolean
+  }> = [
+    { name: 'No Ground Wire', icon: '🚫', color: 'red', condense: true },
+    { name: 'Grounded to Box (Self-Grounding)', icon: '🔩', color: 'amber', condense: true },
+    { name: 'Reverse Polarity', icon: '⚡', color: 'red', condense: true },
+    { name: 'GFCI Protected', icon: '🛡️', color: 'green', condense: false },
+    { name: 'AFCI Protected', icon: '🛡️', color: 'blue', condense: false }
   ]
 
   seedDefaultsForProperty(propertyId: string): void {
     const insert = this.db.prepare(`
-      INSERT OR IGNORE INTO tags (id, property_id, name, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT OR IGNORE INTO tags (id, property_id, name, icon, color, condense, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `)
-    const seed = this.db.transaction((names: string[]) => {
+    const seed = this.db.transaction(() => {
       const now = new Date().toISOString()
-      for (const name of names) {
-        insert.run(randomUUID(), propertyId, name, now, now)
+      for (const t of TagRepository.DEFAULT_TAGS) {
+        insert.run(randomUUID(), propertyId, t.name, t.icon, t.color, t.condense ? 1 : 0, now, now)
       }
     })
-    seed(TagRepository.DEFAULT_TAG_NAMES)
+    seed()
   }
 
   private mapRowToTag(row: any): Tag {

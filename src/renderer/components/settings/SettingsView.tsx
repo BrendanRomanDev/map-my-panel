@@ -3,6 +3,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { queryKeys } from '../../lib/queryKeys'
 import { generatePanelPDF } from '../../utils/pdfExport'
 import { useTheme } from '../../contexts/ThemeContext'
+import { TagManager } from './TagManager'
 import type { Panel, Property } from '@shared/types'
 
 interface SettingsViewProps {
@@ -1406,6 +1407,11 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
             )}
           </div>
         </div>
+      </div>
+
+      {/* Manage Tags Section */}
+      <div>
+        <TagManager propertyId={propertyId} />
       </div>
 
       {/* Danger Zone Section */}
