@@ -1,4 +1,5 @@
 import type { Entity } from '@shared/types'
+import { TagBadgeList } from '../tags/TagBadgeList'
 
 interface EntityCardProps {
   entity: Entity
@@ -54,6 +55,7 @@ export function EntityCard({ entity, onClick, onEdit, onHover, isSelected }: Ent
               {entity.location}
             </div>
           )}
+          <TagBadgeList targetType="entity" targetId={entity.id} />
         </div>
         <div className="flex items-start gap-2 flex-shrink-0">
           {entity.breaker_ids.length === 0 && (

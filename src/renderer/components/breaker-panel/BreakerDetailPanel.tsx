@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useBreakers } from '../../hooks/useBreakers'
 import { useEntitiesByBreaker, useEntities } from '../../hooks/useEntities'
 import { AssignEntitiesModal } from './AssignEntitiesModal'
+import { TagPicker } from '../tags/TagPicker'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import type { BreakerWithEntityCount } from '@shared/types'
 
@@ -17,6 +18,11 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
   const { data: allBreakers } = useBreakers(panelId)
   const { data: entities } = useEntitiesByBreaker(breaker?.id || '')
   const { data: allEntities } = useEntities(panelId)
+  const { data: panel } = useQuery({
+    queryKey: ['panel', panelId],
+    queryFn: () => window.electronAPI.panels.findById(panelId),
+    enabled: !!panelId
+  })
 
   const [label, setLabel] = useState('')
   const [amperage, setAmperage] = useState(15)
@@ -463,6 +469,14 @@ export function BreakerDetailPanel({ breaker, panelId, onClose }: BreakerDetailP
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-auto p-6 space-y-6">
+
+        {/* Tags */}
+        {panel && !breaker.is_container && (
+          <div>
+            <label className="block text-sm font-medium mb-2">Tags</label>
+            <TagPicker targetType="breaker" targetId={breaker.id} propertyId={panel.property_id} />
+          </div>
+        )}
 
         {/* Form */}
         <div className="space-y-4">

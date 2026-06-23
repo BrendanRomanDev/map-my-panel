@@ -1,4 +1,5 @@
 import type { BreakerWithEntityCount } from '@shared/types'
+import { TagBadgeList } from '../tags/TagBadgeList'
 
 interface BreakerCardProps {
   breaker: BreakerWithEntityCount
@@ -129,6 +130,7 @@ export function BreakerCard({ breaker, allBreakers, rooms, isHighlighted = false
               )}
             </div>
           )}
+          {!isContainer && <TagBadgeList targetType="breaker" targetId={breaker.id} />}
         </div>
 
         {/* Power toggle and status indicator */}

@@ -26,6 +26,14 @@ export const queryKeys = {
     unmapped: (panelId: string) => ['entities', 'unmapped', panelId] as const,
     detail: (entityId: string) => ['entities', 'detail', entityId] as const,
   },
+
+  // Tag keys
+  tags: {
+    all: ['tags'] as const,
+    byProperty: (propertyId: string) => ['tags', 'byProperty', propertyId] as const,
+    byTarget: (targetType: string, targetId: string) =>
+      ['tags', 'byTarget', targetType, targetId] as const,
+  },
 } as const
 
 /**

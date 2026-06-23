@@ -217,6 +217,10 @@ export class BreakerRepository extends BaseRepository<Breaker, CreateBreakerInpu
       }
     }
 
+    // Clean up polymorphic tag/history links (no FK to cascade through)
+    this.db.prepare(`DELETE FROM tag_links WHERE target_type = 'breaker' AND target_id = ?`).run(id)
+    this.db.prepare(`DELETE FROM event_links WHERE target_type = 'breaker' AND target_id = ?`).run(id)
+
     const stmt = this.db.prepare('DELETE FROM breakers WHERE id = ?')
     const result = stmt.run(id)
 

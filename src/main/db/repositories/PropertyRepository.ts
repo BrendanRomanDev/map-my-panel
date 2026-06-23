@@ -1,7 +1,24 @@
 import { randomUUID } from 'crypto'
 import { BaseRepository } from './BaseRepository'
 import { PanelRepository } from './PanelRepository'
+import { TagRepository } from './TagRepository'
 import type { Property, CreatePropertyInput, UpdatePropertyInput } from '../../../shared/types'
+
+// Default event types seeded for each new property (mirrors migration 010 backfill)
+const DEFAULT_EVENT_TYPE_NAMES = [
+  'Inspection',
+  'Outlet Change',
+  'Switch Change',
+  'Fixture Change',
+  'Breaker Added',
+  'Breaker Removed',
+  'Meter Install',
+  'Power Outage',
+  'Repair',
+  'Inspection (Third Party)',
+  'Note',
+  'Other'
+]
 
 export class PropertyRepository extends BaseRepository<Property, CreatePropertyInput, UpdatePropertyInput> {
   create(input: CreatePropertyInput): Property {
@@ -19,7 +36,26 @@ export class PropertyRepository extends BaseRepository<Property, CreatePropertyI
 
     stmt.run(id, input.name, '[]', isCurrent, now, now)
 
+    // Seed default tags + event types for the new property (the migration
+    // backfill only covers properties that existed at migration time).
+    new TagRepository(this.db).seedDefaultsForProperty(id)
+    this.seedDefaultEventTypes(id)
+
     return this.findById(id)!
+  }
+
+  private seedDefaultEventTypes(propertyId: string): void {
+    const insert = this.db.prepare(`
+      INSERT OR IGNORE INTO event_types (id, property_id, name, created_at)
+      VALUES (?, ?, ?, ?)
+    `)
+    const seed = this.db.transaction((names: string[]) => {
+      const nowIso = new Date().toISOString()
+      for (const name of names) {
+        insert.run(`evt_${randomUUID().replace(/-/g, '').substring(0, 16)}`, propertyId, name, nowIso)
+      }
+    })
+    seed(DEFAULT_EVENT_TYPE_NAMES)
   }
 
   findById(id: string): Property | null {

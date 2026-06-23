@@ -13,7 +13,12 @@ import type {
   UpdatePropertyInput,
   UpdatePanelInput,
   UpdateBreakerInput,
-  UpdateEntityInput
+  UpdateEntityInput,
+  Tag,
+  TagLink,
+  CreateTagInput,
+  UpdateTagInput,
+  TargetType
 } from '../shared/types'
 
 export interface ElectronAPI {
@@ -71,6 +76,17 @@ export interface ElectronAPI {
     renameRoom: (panelId: string, oldName: string, newName: string) => Promise<number>
     getAllEntityTypes: (panelId: string) => Promise<Array<{ entity_type: string; count: number }>>
     changeEntityType: (panelId: string, oldType: string, newType: string) => Promise<number>
+  }
+  tags: {
+    create: (input: CreateTagInput) => Promise<Tag>
+    findById: (id: string) => Promise<Tag | null>
+    listForProperty: (propertyId: string) => Promise<Tag[]>
+    listForTarget: (targetType: TargetType, targetId: string) => Promise<Tag[]>
+    update: (id: string, input: UpdateTagInput) => Promise<Tag | null>
+    delete: (id: string) => Promise<boolean>
+    attach: (tagId: string, targetType: TargetType, targetId: string) => Promise<void>
+    detach: (tagId: string, targetType: TargetType, targetId: string) => Promise<void>
+    listTargetsForTag: (tagId: string) => Promise<TagLink[]>
   }
 }
 
@@ -131,6 +147,17 @@ const electronAPI: ElectronAPI = {
   },
   seed: {
     loadSample: () => ipcRenderer.invoke('seed:loadSample')
+  },
+  tags: {
+    create: (input) => ipcRenderer.invoke('tags:create', input),
+    findById: (id) => ipcRenderer.invoke('tags:findById', id),
+    listForProperty: (propertyId) => ipcRenderer.invoke('tags:listForProperty', propertyId),
+    listForTarget: (targetType, targetId) => ipcRenderer.invoke('tags:listForTarget', targetType, targetId),
+    update: (id, input) => ipcRenderer.invoke('tags:update', id, input),
+    delete: (id) => ipcRenderer.invoke('tags:delete', id),
+    attach: (tagId, targetType, targetId) => ipcRenderer.invoke('tags:attach', tagId, targetType, targetId),
+    detach: (tagId, targetType, targetId) => ipcRenderer.invoke('tags:detach', tagId, targetType, targetId),
+    listTargetsForTag: (tagId) => ipcRenderer.invoke('tags:listTargetsForTag', tagId)
   }
 }
 

@@ -1,7 +1,7 @@
 # Story 1.1: Tag Data Layer (Migration, Types, Repository, IPC)
 
 **Epic:** 1 — Tags
-**Status:** Approved
+**Status:** Ready for Review
 **Architecture ref:** `docs/architecture-tags-and-history.md`
 
 ## Story
@@ -44,10 +44,34 @@ This story delivers the full backend slice for tags: schema (already drafted as 
 ## Dev Agent Record
 
 ### File List
-_(to be filled by dev)_
+**New:**
+- `src/main/db/migrations.ts` (extracted from database.ts so migrations run without electron)
+- `src/main/db/repositories/TagRepository.ts`
+- `src/main/ipc/tagHandlers.ts`
+- `src/renderer/hooks/useTags.ts`
+- `src/renderer/components/tags/TagBadge.tsx`
+- `src/renderer/components/tags/TagBadgeList.tsx`
+- `src/renderer/components/tags/TagPicker.tsx`
+- `tests/integration/TagRepository.test.ts`
+
+**Modified:**
+- `src/main/db/database.ts` (import runMigrations from migrations.ts)
+- `src/main/db/repositories/index.ts` (export TagRepository)
+- `src/main/db/repositories/PropertyRepository.ts` (seed default tags + event types on create)
+- `src/main/db/repositories/EntityRepository.ts` (cleanup tag/event links on delete)
+- `src/main/db/repositories/BreakerRepository.ts` (cleanup tag/event links on delete)
+- `src/main/ipc/index.ts` (register tag handlers)
+- `src/preload/index.ts` (tags namespace)
+- `src/renderer/lib/queryKeys.ts` (tag keys)
+- `src/renderer/components/entities/EntityCard.tsx` (TagBadgeList)
+- `src/renderer/components/breaker-panel/BreakerCard.tsx` (TagBadgeList)
+- `src/renderer/components/breaker-panel/BreakerDetailPanel.tsx` (TagPicker)
 
 ### Completion Notes
-_(to be filled by dev)_
+- All 23 unit tests pass (12 new TagRepository + 11 existing). Typecheck at baseline (9 pre-existing errors, 0 new). `npm run build` succeeds.
+- **Bug found & fixed during testing:** migration 009/010 only seed defaults for properties existing AT migration time. Added `TagRepository.seedDefaultsForProperty` + `PropertyRepository.seedDefaultEventTypes`, called from `PropertyRepository.create`, so new properties get defaults too.
+- **Toolchain note:** `better-sqlite3` is compiled for Electron's ABI (postinstall runs electron-rebuild). Running the DB unit tests requires `npm rebuild better-sqlite3` (system Node ABI) first, then `npm run postinstall` to restore the Electron binary. Documented for CI/future work — a stable fix (e.g. vitest electron runner) is a follow-up.
+- Standalone events (`property` target) and EventType repository/UI are NOT in this story — History phase.
 
 ### Change Log
-_(to be filled by dev)_
+- 2026-06-23: Implemented full Tags data layer + minimal UI (badges on cards, picker in breaker detail). Status → Ready for Review.
