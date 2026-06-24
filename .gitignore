@@ -42,6 +42,9 @@ app/
 release/
 .devswarm-temp/
 
+# MCP: node-ABI better-sqlite3 binary (regenerate with `npm run mcp:setup`)
+mcp/native/
+
 # Local backup exports (anything saved to repo root during testing)
 /backup-*.json
 /personal-backup-*.json

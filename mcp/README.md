@@ -56,10 +56,21 @@ claude mcp add map-my-panel -- npx tsx ./mcp/server.ts
 - `apply_panel_import` auto-exports a v3.0 backup before writing, and writes in a transaction (rolls back on error).
 - Writes go through the repository layer, so double-pole linking, entity arrays, seeding, and validation all apply. It never resets the DB.
 
-## Note: native module
+## Native module setup (run once)
 
-`better-sqlite3` is compiled for Electron's ABI by the app's `postinstall`. The
-MCP runs under system Node, which has a different ABI. If the server errors with
-a `NODE_MODULE_VERSION` mismatch, run `npm rebuild better-sqlite3` before
-starting it (and `npm run postinstall` again before running the desktop app). A
-permanent fix (a separate node-ABI copy of the binary) is a future improvement.
+`better-sqlite3` is compiled for Electron's ABI by the app's `postinstall`, but
+the MCP runs under system Node (a different ABI). To let both work without a
+rebuild dance, the MCP loads its own node-ABI copy of the binary via
+better-sqlite3's `nativeBinding` option.
+
+Generate that copy once (and again whenever your Node version changes):
+
+```bash
+npm run mcp:setup
+```
+
+This rebuilds the binary for system Node, saves it to
+`mcp/native/better_sqlite3-node.node` (gitignored), and restores the Electron
+binary for the desktop app. After running it, the MCP and the app both work
+simultaneously. If the MCP ever errors with a `NODE_MODULE_VERSION` mismatch,
+re-run `npm run mcp:setup`.

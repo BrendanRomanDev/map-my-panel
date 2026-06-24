@@ -26,6 +26,7 @@
     "test:coverage": "vitest run --coverage",
     "export:data": "tsx scripts/export-data.ts",
     "mcp": "tsx mcp/server.ts",
+    "mcp:setup": "bash scripts/mcp-setup.sh",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist:all": "npm run build && electron-builder --mac --win",

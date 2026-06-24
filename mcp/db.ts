@@ -1,8 +1,16 @@
 import Database from 'better-sqlite3'
-import { join } from 'path'
+import { join, dirname } from 'path'
 import { homedir } from 'os'
 import { existsSync } from 'fs'
+import { fileURLToPath } from 'url'
 import { runMigrations } from '../src/main/db/migrations'
+
+// The app's better-sqlite3 binary is compiled for Electron's ABI (via the
+// app's postinstall). The MCP runs under system Node, a different ABI. To let
+// BOTH work without a rebuild dance, we ship a node-ABI copy of the binary at
+// mcp/native/ and load it explicitly via better-sqlite3's `nativeBinding`.
+// Rebuild it with `npm run mcp:setup` if your Node version changes.
+const NODE_BINDING = join(dirname(fileURLToPath(import.meta.url)), 'native', 'better_sqlite3-node.node')
 
 // Resolves the Electron app's SQLite DB path (the same file the desktop app
 // reads/writes). Electron uses app.getPath('userData'); we replicate that per
@@ -31,7 +39,10 @@ export function openDatabase(): Database.Database {
       `Map My Panel database not found at ${dbPath}. Launch the desktop app at least once to create it.`
     )
   }
-  const db = new Database(dbPath)
+  // Prefer the node-ABI binary shipped with the MCP; fall back to the default
+  // resolution if it's missing (e.g. someone ran `npm rebuild` for node).
+  const options = existsSync(NODE_BINDING) ? { nativeBinding: NODE_BINDING } : undefined
+  const db = new Database(dbPath, options)
   db.pragma('foreign_keys = ON')
   db.pragma('journal_mode = WAL')
   runMigrations(db)
