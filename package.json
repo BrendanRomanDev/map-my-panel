@@ -25,15 +25,18 @@
     "test:e2e:debug": "npm run build && playwright test --debug",
     "test:coverage": "vitest run --coverage",
     "export:data": "tsx scripts/export-data.ts",
+    "mcp": "tsx mcp/server.ts",
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist:all": "npm run build && electron-builder --mac --win",
     "dist:dir": "npm run build && electron-builder --dir"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@tanstack/react-query": "^5.56.2",
     "better-sqlite3": "^11.6.0",
     "jspdf": "^3.0.3",
+    "zod": "^4.4.3",
     "zustand": "^4.5.5"
   },
   "devDependencies": {
