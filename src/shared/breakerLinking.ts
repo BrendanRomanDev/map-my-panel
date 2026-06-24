@@ -1,4 +1,6 @@
-import type { Breaker } from '@shared/types'
+// Pure double-pole link planner — shared by the renderer (BreakerDetailPanel)
+// and the MCP ingest server, so link rules are enforced identically wherever
+// breakers are linked. No renderer/electron deps.
 
 // A minimal shape sufficient for link planning (works with Breaker or
 // BreakerWithEntityCount).

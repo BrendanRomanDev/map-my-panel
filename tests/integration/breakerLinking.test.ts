@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { planLinkChange, isLinkError } from '../../src/renderer/lib/breakerLinking'
-import type { LinkableBreaker } from '../../src/renderer/lib/breakerLinking'
+import { planLinkChange, isLinkError } from '../../src/shared/breakerLinking'
+import type { LinkableBreaker } from '../../src/shared/breakerLinking'
 
 function bk(over: Partial<LinkableBreaker> & { id: string; position: number }): LinkableBreaker {
   return {

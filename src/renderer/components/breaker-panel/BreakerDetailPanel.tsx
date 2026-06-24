@@ -6,7 +6,7 @@ import { useTagSelection } from '../../hooks/useTags'
 import { AssignEntitiesModal } from './AssignEntitiesModal'
 import { TagPicker } from '../tags/TagPicker'
 import { logBreakerLinkChange, mergeBreakerHistories } from '../../lib/historyActions'
-import { planLinkChange, isLinkError, type LinkPlan } from '../../lib/breakerLinking'
+import { planLinkChange, isLinkError, type LinkPlan } from '@shared/breakerLinking'
 import { queryKeys, invalidateEntityBreakerQueries } from '../../lib/queryKeys'
 import type { BreakerWithEntityCount } from '@shared/types'
 
