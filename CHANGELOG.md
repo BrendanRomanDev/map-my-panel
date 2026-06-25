@@ -25,6 +25,10 @@ Adds a Tags & Service-History system for documenting electrical conditions and w
 - Deleting or resetting a panel no longer leaves orphaned tag/history links — enforced at the database layer via triggers, with a one-time cleanup of any existing orphans.
 - Dev server pinned to a dedicated port so running two Electron apps no longer cross-launches.
 
+### Tooling (developer-only, not part of the installed app)
+
+- **Claude Code MCP ingest server + `/map-panel` command** — populate the app by talking to Claude Code: paste a breaker directory, a photo, or a voice transcript; it normalizes the names, interviews you, previews, auto-backs-up, and writes via the app's data layer. Runs from source; see `mcp/README.md`.
+
 ## [0.1.1] — 2026-05-27
 
 Polish release. No functional changes — same features as v0.1.0.

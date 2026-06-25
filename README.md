@@ -105,6 +105,35 @@ npm run build:all   # both
 
 ---
 
+## Talk to your panel via Claude Code (MCP)
+
+If you have this repo and [Claude Code](https://claude.com/claude-code), there's
+an **MCP server + `/map-panel` command** that lets you populate the app by
+*talking to it* instead of clicking through the UI. Paste your breaker directory
+(text or CSV), drop a **photo** of your panel door label, or even a **voice-rant
+transcript** from walking the house — Claude parses it, cleans up the messy
+shorthand into presentable names, interviews you on anything unclear, previews
+the changes, and writes them into the same database the app reads. Open the app
+afterward and it's all there.
+
+This is a **developer tool, not part of the installed app** — it runs from source
+and writes to your local database directly (through the app's own data layer, so
+all the rules apply, and it auto-backs-up before writing).
+
+```bash
+# One-time native-module setup (lets the MCP and app share the DB binary)
+npm run mcp:setup
+
+# Register the MCP with Claude Code
+claude mcp add map-my-panel -- npx tsx ./mcp/server.ts
+# then restart Claude Code, and run /map-panel in a session
+```
+
+See [`mcp/README.md`](./mcp/README.md) for full setup and
+[`docs/architecture-mcp-ingest.md`](./docs/architecture-mcp-ingest.md) for the design.
+
+---
+
 ## Tech Stack
 
 - **Electron 33** — cross-platform desktop runtime
@@ -160,6 +189,8 @@ See `docs/` for deeper specs:
 - `docs/prd.md` — product requirements & user stories
 - `docs/architecture.md` — technical architecture
 - `docs/front-end-spec.md` — UI/UX specification
+- `docs/architecture-mcp-ingest.md` — the Claude Code MCP ingest server design
+- `mcp/README.md` — MCP server setup & usage
 - `CHANGELOG.md` — release notes
 - `FEATURE_REQUESTS.md` — backlog of ideas
 
