@@ -99,6 +99,50 @@ describe('Panel import (MCP)', () => {
     expect(byKey.get('9')!.status).toBe('spare')
   })
 
+  it('creates a container base for tandem slots (fresh position)', () => {
+    const plan = PanelImportPlanSchema.parse({
+      breakers: [
+        { position: 15, position_slot: 'a', label: 'Floodlights', status: 'active', amperage: 15, entities: [] },
+        { position: 15, position_slot: 'b', label: 'Washer/Dryer', status: 'active', amperage: 15, entities: [] }
+      ],
+      links: []
+    })
+    applyImport(db, panelId, plan, tmpdir())
+
+    const breakers = new BreakerRepository(db).listByPanel(panelId)
+    const base = breakers.find(b => b.position === 15 && b.position_slot === null)!
+    const a = breakers.find(b => b.position === 15 && b.position_slot === 'a')!
+    const b = breakers.find(b => b.position === 15 && b.position_slot === 'b')!
+    expect(base.is_container).toBe(true)
+    expect(base.amperage).toBeNull()
+    expect(base.breaker_type).toBeNull()
+    expect(a.is_container).toBe(false)
+    expect(a.amperage).toBe(15)
+    expect(b.label).toBe('Washer/Dryer')
+  })
+
+  it('converts an existing plain breaker into a container when slots are added', () => {
+    // Pre-create a plain single-pole breaker at position 15 (no slot)
+    new BreakerRepository(db).create({
+      panel_id: panelId, position: 15, breaker_type: 'single-pole', amperage: 15, status: 'active'
+    })
+    const plan = PanelImportPlanSchema.parse({
+      breakers: [
+        { position: 15, position_slot: 'a', label: 'A', status: 'active', amperage: 15, entities: [] },
+        { position: 15, position_slot: 'b', label: 'B', status: 'active', amperage: 20, entities: [] }
+      ],
+      links: []
+    })
+    applyImport(db, panelId, plan, tmpdir())
+
+    const breakers = new BreakerRepository(db).listByPanel(panelId)
+    const base = breakers.find(b => b.position === 15 && b.position_slot === null)!
+    expect(base.is_container).toBe(true)
+    expect(base.amperage).toBeNull()
+    // No duplicate base row
+    expect(breakers.filter(b => b.position === 15 && b.position_slot === null)).toHaveLength(1)
+  })
+
   it('re-running an import updates existing breakers instead of duplicating', () => {
     const plan = PanelImportPlanSchema.parse(REAL_PANEL)
     applyImport(db, panelId, plan, tmpdir())

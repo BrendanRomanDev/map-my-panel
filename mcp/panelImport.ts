@@ -163,8 +163,44 @@ export function applyImport(
     const existing = breakerRepo.listByPanel(panelId)
     const byPos = new Map(existing.map(b => [posKey(b.position, b.position_slot), b.id]))
 
-    // Breakers + their entities
+    // Positions that have tandem slots in the plan need a CONTAINER base row at
+    // the bare position (position_slot=null, is_container=1, null amperage/type).
+    // The slot breakers carry the real specs.
+    const tandemPositions = new Set(
+      plan.breakers.filter(b => b.position_slot).map(b => b.position)
+    )
+    for (const position of tandemPositions) {
+      const bareKey = posKey(position, null)
+      const existingBareId = byPos.get(bareKey)
+      if (existingBareId) {
+        // Convert an existing plain breaker at this position into a container.
+        const row = existing.find(e => e.id === existingBareId)
+        if (!row?.is_container) {
+          breakerRepo.update(existingBareId, {
+            is_container: true,
+            breaker_type: null,
+            amperage: null
+          })
+        }
+      } else {
+        const container = breakerRepo.create({
+          panel_id: panelId,
+          position,
+          position_slot: null,
+          is_container: true,
+          breaker_type: null,
+          amperage: null,
+          status: 'active'
+        })
+        byPos.set(bareKey, container.id)
+      }
+    }
+
+    // Breakers + their entities. Skip any plan entry that is a bare position
+    // which is now a container (handled above) — only slot rows carry specs there.
     for (const b of plan.breakers) {
+      if (!b.position_slot && tandemPositions.has(b.position)) continue
+
       const key = posKey(b.position, b.position_slot)
       let breakerId = byPos.get(key)
 
