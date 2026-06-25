@@ -205,6 +205,16 @@ export function applyImport(
       let breakerId = byPos.get(key)
 
       if (breakerId) {
+        // If the existing row at this bare position is actually a CONTAINER (the
+        // panel has tandem slots here that the plan didn't account for), never
+        // write amperage/breaker_type to it — that violates the container check
+        // constraint. Just refresh the label and move on.
+        const existingRow = existing.find(e => e.id === breakerId)
+        if (!b.position_slot && existingRow?.is_container) {
+          if (b.label !== undefined) breakerRepo.update(breakerId, { label: b.label })
+          breakersUpdated++
+          continue
+        }
         breakerRepo.update(breakerId, {
           breaker_type: b.breaker_type || 'single-pole',
           amperage: b.amperage ?? 15,

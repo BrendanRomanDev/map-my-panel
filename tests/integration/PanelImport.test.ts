@@ -143,6 +143,25 @@ describe('Panel import (MCP)', () => {
     expect(breakers.filter(b => b.position === 15 && b.position_slot === null)).toHaveLength(1)
   })
 
+  it('does not write specs to a position that is already a container (plan treats it as plain)', () => {
+    const repo = new BreakerRepository(db)
+    // Pre-create a container tandem at position 3 (like leftover test data)
+    repo.create({ panel_id: panelId, position: 3, is_container: true, breaker_type: null, amperage: null, status: 'active' })
+    repo.create({ panel_id: panelId, position: 3, position_slot: 'a', breaker_type: 'single-pole', amperage: 15, status: 'active' })
+
+    // Plan treats position 3 as a plain breaker — must NOT violate the container constraint
+    const plan = PanelImportPlanSchema.parse({
+      breakers: [{ position: 3, label: 'Home Office', status: 'active', amperage: 20, entities: [] }],
+      links: []
+    })
+    expect(() => applyImport(db, panelId, plan, tmpdir())).not.toThrow()
+
+    const base = repo.listByPanel(panelId).find(b => b.position === 3 && b.position_slot === null)!
+    expect(base.is_container).toBe(true)
+    expect(base.amperage).toBeNull()
+    expect(base.label).toBe('Home Office') // label still updated
+  })
+
   it('re-running an import updates existing breakers instead of duplicating', () => {
     const plan = PanelImportPlanSchema.parse(REAL_PANEL)
     applyImport(db, panelId, plan, tmpdir())
