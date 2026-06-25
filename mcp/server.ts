@@ -4,6 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { homedir } from 'os'
 import { join } from 'path'
+import { mkdirSync, writeFileSync } from 'fs'
 import { openDatabase, resolveDbPath } from './db'
 import {
   PanelImportPlanSchema,
@@ -87,7 +88,7 @@ server.registerTool(
     try {
       const plan = PanelImportPlanSchema.parse({ breakers, links })
       const backupDir = process.env.MAP_MY_PANEL_BACKUP_DIR || join(homedir(), 'Documents', 'map-my-panel-backups')
-      require('fs').mkdirSync(backupDir, { recursive: true })
+      mkdirSync(backupDir, { recursive: true })
       const result = applyImport(db, panelId, plan, backupDir)
       return text(result)
     } finally {
@@ -110,9 +111,9 @@ server.registerTool(
       const { BackupRepository } = await import('../src/main/db/repositories')
       const backup = new BackupRepository(db).exportDatabase()
       const outDir = dir || join(homedir(), 'Documents', 'map-my-panel-backups')
-      require('fs').mkdirSync(outDir, { recursive: true })
+      mkdirSync(outDir, { recursive: true })
       const path = join(outDir, `map-my-panel-backup-${backup.exportDate.replace(/[:.]/g, '-')}.json`)
-      require('fs').writeFileSync(path, JSON.stringify(backup, null, 2), 'utf-8')
+      writeFileSync(path, JSON.stringify(backup, null, 2), 'utf-8')
       return text({ backupPath: path, version: backup.version })
     } finally {
       db.close()

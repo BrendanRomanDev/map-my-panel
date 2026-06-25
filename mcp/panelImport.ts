@@ -1,4 +1,5 @@
 import type Database from 'better-sqlite3'
+import { writeFileSync } from 'fs'
 import { z } from 'zod'
 import {
   BreakerRepository,
@@ -148,9 +149,7 @@ export function applyImport(
   // 1) Auto-backup first (outside the write transaction)
   const backup = new BackupRepository(db).exportDatabase()
   const backupPath = `${backupDir.replace(/\/$/, '')}/map-my-panel-backup-pre-import-${backup.exportDate.replace(/[:.]/g, '-')}.json`
-  // Lazy import fs to keep this module electron-free at top level
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  require('fs').writeFileSync(backupPath, JSON.stringify(backup, null, 2), 'utf-8')
+  writeFileSync(backupPath, JSON.stringify(backup, null, 2), 'utf-8')
 
   const breakerRepo = new BreakerRepository(db)
   const entityRepo = new EntityRepository(db)
