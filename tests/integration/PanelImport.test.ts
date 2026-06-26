@@ -191,6 +191,28 @@ describe('Panel import (MCP)', () => {
     expect(mapped.breaker_ids).toHaveLength(1)
   })
 
+  it('applyTags attaches tags to entities and breakers, creating tags as needed', async () => {
+    const { applyTags, TagAssignmentSchema } = await import('../../mcp/panelImport')
+    const { z } = await import('zod')
+    const { TagRepository } = await import('../../src/main/db/repositories')
+
+    const br = new BreakerRepository(db).create({ panel_id: panelId, position: 19, position_slot: 'b', breaker_type: 'single-pole', amperage: 20, status: 'active' })
+    new EntityRepository(db).create({ panel_id: panelId, breaker_ids: [br.id], entity_type: 'outlet', name: 'Wes Outlet', room: 'Front Bedroom' })
+
+    const input = z.array(TagAssignmentSchema).parse([
+      { tag: 'No Ground Wire', breakerPosition: '19b' },
+      { tag: 'Confirm Mapping', entityName: 'Wes Outlet', color: 'blue' }
+    ])
+    const r = applyTags(db, panelId, input, tmpdir())
+    expect(r.attached).toBe(2)
+    expect(r.unresolved).toHaveLength(0)
+
+    const tagRepo = new TagRepository(db)
+    expect(tagRepo.listForTarget('breaker', br.id).some(t => t.name === 'No Ground Wire')).toBe(true)
+    const ent = new EntityRepository(db).listByPanel(panelId).find(e => e.name === 'Wes Outlet')!
+    expect(tagRepo.listForTarget('entity', ent.id).some(t => t.name === 'Confirm Mapping')).toBe(true)
+  })
+
   it('re-running an import updates existing breakers instead of duplicating', () => {
     const plan = PanelImportPlanSchema.parse(REAL_PANEL)
     applyImport(db, panelId, plan, tmpdir())

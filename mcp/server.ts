@@ -12,9 +12,12 @@ import {
   PanelLinkShape,
   AddEntityShape,
   AddEntitySchema,
+  TagAssignmentShape,
+  TagAssignmentSchema,
   dryRunImport,
   applyImport,
-  addEntities
+  addEntities,
+  applyTags
 } from './panelImport'
 import { PropertyRepository, PanelRepository, BreakerRepository } from '../src/main/db/repositories'
 
@@ -143,6 +146,31 @@ server.registerTool(
       const backupDir = process.env.MAP_MY_PANEL_BACKUP_DIR || join(homedir(), 'Documents', 'map-my-panel-backups')
       mkdirSync(backupDir, { recursive: true })
       return text(addEntities(db, panelId, parsed, backupDir))
+    } finally {
+      db.close()
+    }
+  }
+)
+
+// 6) apply_tags — attach tags (creating them if needed) to entities/breakers
+server.registerTool(
+  'apply_tags',
+  {
+    title: 'Apply tags',
+    description:
+      'Attach tags to entities (by exact name) or breakers (by position). Tags are created if they don\'t exist yet (e.g. "No Ground Wire", "Grounded to Box (Self-Grounding)", "Confirm Mapping", "Deprecated"). Auto-backs-up before writing.',
+    inputSchema: {
+      panelId: z.string().describe('Target panel id (from get_context).'),
+      assignments: z.array(z.object(TagAssignmentShape)).describe('Tag assignments: each has a tag name + either entityName or breakerPosition.')
+    }
+  },
+  async ({ panelId, assignments }) => {
+    const db = openDatabase()
+    try {
+      const parsed = z.array(TagAssignmentSchema).parse(assignments)
+      const backupDir = process.env.MAP_MY_PANEL_BACKUP_DIR || join(homedir(), 'Documents', 'map-my-panel-backups')
+      mkdirSync(backupDir, { recursive: true })
+      return text(applyTags(db, panelId, parsed, backupDir))
     } finally {
       db.close()
     }

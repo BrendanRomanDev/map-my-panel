@@ -5,7 +5,8 @@ import {
   BreakerRepository,
   EntityRepository,
   PanelRepository,
-  BackupRepository
+  BackupRepository,
+  TagRepository
 } from '../src/main/db/repositories'
 
 // ---- Plan schema --------------------------------------------------------
@@ -364,5 +365,100 @@ export function addEntities(
     backupPath,
     created,
     unmapped
+  }
+}
+
+// ---- Tagging ------------------------------------------------------------
+
+// One tag assignment: a tag name applied to a target identified by EITHER an
+// entity name OR a breaker position ("12", "17b"). Tag is created (scoped to
+// the panel's property) if it doesn't exist yet.
+export const TagAssignmentShape = {
+  tag: z.string().describe('Tag name, e.g. "No Ground Wire", "Confirm Mapping", "Deprecated".'),
+  entityName: z.string().nullable().optional().describe('Exact entity name to tag.'),
+  breakerPosition: z.string().nullable().optional().describe('Breaker position to tag, e.g. "19b".'),
+  // Optional metadata for creating a new tag
+  color: z.string().nullable().optional(),
+  icon: z.string().nullable().optional(),
+  description: z.string().nullable().optional()
+}
+export const TagAssignmentSchema = z.object(TagAssignmentShape)
+export type TagAssignment = z.infer<typeof TagAssignmentSchema>
+
+export interface ApplyTagsResult {
+  summary: string
+  backupPath: string
+  attached: number
+  unresolved: string[]
+}
+
+export function applyTags(
+  db: Database.Database,
+  panelId: string,
+  assignments: TagAssignment[],
+  backupDir: string
+): ApplyTagsResult {
+  const backup = new BackupRepository(db).exportDatabase()
+  const backupPath = `${backupDir.replace(/\/$/, '')}/map-my-panel-backup-pre-tags-${backup.exportDate.replace(/[:.]/g, '-')}.json`
+  writeFileSync(backupPath, JSON.stringify(backup, null, 2), 'utf-8')
+
+  const panelRepo = new PanelRepository(db)
+  const breakerRepo = new BreakerRepository(db)
+  const entityRepo = new EntityRepository(db)
+  const tagRepo = new TagRepository(db)
+
+  const panel = panelRepo.findById(panelId)
+  if (!panel) throw new Error(`Panel ${panelId} not found.`)
+  const propertyId = (panel as any).property_id as string
+
+  let attached = 0
+  const unresolved: string[] = []
+
+  const run = db.transaction(() => {
+    const breakers = breakerRepo.listByPanel(panelId)
+    const entities = entityRepo.listByPanel(panelId)
+    const propertyTags = tagRepo.listForProperty(propertyId)
+    const tagByName = new Map(propertyTags.map(t => [t.name.toLowerCase(), t]))
+
+    const resolveTag = (a: TagAssignment) => {
+      const existing = tagByName.get(a.tag.toLowerCase())
+      if (existing) return existing
+      const created = tagRepo.create({
+        property_id: propertyId,
+        name: a.tag,
+        color: a.color ?? null,
+        icon: a.icon ?? null,
+        description: a.description ?? null
+      })
+      tagByName.set(a.tag.toLowerCase(), created)
+      return created
+    }
+
+    for (const a of assignments) {
+      const tag = resolveTag(a)
+      if (a.entityName) {
+        const ent = entities.find(e => e.name.toLowerCase() === a.entityName!.toLowerCase())
+        if (!ent) { unresolved.push(`entity "${a.entityName}"`); continue }
+        tagRepo.attach(tag.id, 'entity', ent.id)
+        attached++
+      } else if (a.breakerPosition) {
+        const p = parsePos(a.breakerPosition)
+        const br = breakers.find(b => b.position === p.position && (b.position_slot || null) === p.slot)
+        if (!br) { unresolved.push(`breaker "${a.breakerPosition}"`); continue }
+        tagRepo.attach(tag.id, 'breaker', br.id)
+        attached++
+      } else {
+        unresolved.push(`assignment for tag "${a.tag}" (no entityName or breakerPosition)`)
+      }
+    }
+  })
+
+  run()
+
+  return {
+    summary: `Attached ${attached} tag(s).${unresolved.length ? ` ${unresolved.length} unresolved.` : ''}`,
+    backupPath,
+    attached,
+    unresolved
   }
 }
