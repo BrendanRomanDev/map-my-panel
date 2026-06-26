@@ -4,6 +4,39 @@ This document tracks feature requests and enhancement ideas for Map My Panel.
 
 ---
 
+## 0. Panel-scoped History (filter the global view by panel)
+
+**Priority**: Medium
+**Status**: Next Up
+
+### Problem
+History (shipped in v0.2.0) is scoped per **property** in the global Property
+History view — `listForProperty` returns every event in the property. For a
+property with multiple panels (e.g. "55 Center" has two), the global view mixes
+both panels' events with no way to separate them. A breaker change on Panel 1 is
+panel-specific, not property-level, but there's no panel-level history surface.
+
+### What already works
+- Breaker-level and entity-level history (clock icon on cards) — genuinely per-circuit.
+- `'panel'` is a valid polymorphic target type, so events *can* attach to a whole panel.
+
+### Proposed solution
+- Add a **panel filter** to the global Property History view: **Global / Panel 1
+  / Panel 2 / …**. "Global" rolls up everything (incl. property-level events);
+  selecting a panel shows only that panel's events.
+- **Derive panel from the target** (breaker/entity → panel) — no schema change,
+  no `panel_id` column on `history_events`. Property-targeted events (utility
+  visit, meter install) belong only to "Global".
+- New repo query, e.g. `listForPanel(panelId)` joining event_links → breakers/
+  entities of that panel, plus the panel's own `target_type='panel'` events.
+
+### Notes
+- Decided 2026-06-25: derive-from-target over adding a column (additive, simpler).
+- Property-level remains the right home for whole-property events; per-panel is
+  for circuit/breaker changes within a specific panel.
+
+---
+
 ## 1. Entity Condition Tags & Work History
 
 **Priority**: High

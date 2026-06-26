@@ -51,3 +51,7 @@ mcp/native/
 
 # One-off export script output (npm run export:data writes here)
 /tmp/
+
+
+# Personal/private notes (never committed)
+private/
