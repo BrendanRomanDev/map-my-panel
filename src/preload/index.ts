@@ -106,6 +106,7 @@ export interface ElectronAPI {
     removeTarget: (eventId: string, targetType: TargetType, targetId: string) => Promise<boolean>
     listForTarget: (targetType: TargetType, targetId: string) => Promise<HistoryEventWithDetails[]>
     listForProperty: (propertyId: string) => Promise<HistoryEventWithDetails[]>
+    listForPanel: (panelId: string) => Promise<HistoryEventWithDetails[]>
     listForBreakerRollup: (breakerId: string) => Promise<RolledUpHistoryEvent[]>
     listEventTypes: (propertyId: string) => Promise<EventType[]>
     createEventType: (input: CreateEventTypeInput) => Promise<EventType>
@@ -194,6 +195,7 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke('history:removeTarget', eventId, targetType, targetId),
     listForTarget: (targetType, targetId) => ipcRenderer.invoke('history:listForTarget', targetType, targetId),
     listForProperty: (propertyId) => ipcRenderer.invoke('history:listForProperty', propertyId),
+    listForPanel: (panelId) => ipcRenderer.invoke('history:listForPanel', panelId),
     listForBreakerRollup: (breakerId) => ipcRenderer.invoke('history:listForBreakerRollup', breakerId),
     listEventTypes: (propertyId) => ipcRenderer.invoke('history:listEventTypes', propertyId),
     createEventType: (input) => ipcRenderer.invoke('history:createEventType', input),

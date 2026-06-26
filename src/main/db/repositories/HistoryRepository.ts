@@ -230,6 +230,24 @@ export class HistoryRepository {
     return rows.map(row => this.decorate(this.mapRowToEvent(row)))
   }
 
+  // Panel-scoped history: events whose target is the panel itself, a breaker on
+  // the panel, or an entity on the panel. Panel is derived from the target (no
+  // panel_id on history_events). Property-targeted events are NOT included.
+  // Deduped by event id, newest first.
+  listForPanel(panelId: string): HistoryEventWithDetails[] {
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT e.* FROM history_events e
+         INNER JOIN event_links l ON l.event_id = e.id
+         WHERE (l.target_type = 'panel'   AND l.target_id = @panel)
+            OR (l.target_type = 'breaker' AND l.target_id IN (SELECT id FROM breakers WHERE panel_id = @panel))
+            OR (l.target_type = 'entity'  AND l.target_id IN (SELECT id FROM entities WHERE panel_id = @panel))
+         ORDER BY e.occurred_on DESC, e.logged_at DESC`
+      )
+      .all({ panel: panelId }) as any[]
+    return rows.map(row => this.decorate(this.mapRowToEvent(row)))
+  }
+
   // ---- Event types --------------------------------------------------------
 
   listEventTypes(propertyId: string): EventType[] {

@@ -1,6 +1,7 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import type { HistoryEventWithDetails } from '@shared/types'
-import { useHistoryForProperty, useEventTypes } from '../../hooks/useHistory'
+import { useHistoryForProperty, useHistoryForPanel, useEventTypes } from '../../hooks/useHistory'
 import { useTags } from '../../hooks/useTags'
 import { HistoryTimeline } from './HistoryTimeline'
 import { AddEventModal } from './AddEventModal'
@@ -15,7 +16,19 @@ interface PropertyHistoryViewProps {
 // an Add Event entry point that can span targets across breakers (or none =
 // a standalone whole-property note).
 export function PropertyHistoryView({ propertyId, panelId }: PropertyHistoryViewProps) {
-  const { data: events } = useHistoryForProperty(propertyId)
+  // Scope: '' = Global (whole property), or a specific panel id.
+  const [scope, setScope] = useState('')
+
+  const { data: panels } = useQuery({
+    queryKey: ['panels', 'byProperty', propertyId],
+    queryFn: () => window.electronAPI.panels.findByProperty(propertyId),
+    enabled: !!propertyId
+  })
+
+  const propertyEvents = useHistoryForProperty(scope ? null : propertyId)
+  const panelEvents = useHistoryForPanel(scope || null)
+  const events = scope ? panelEvents.data : propertyEvents.data
+
   const { data: eventTypes } = useEventTypes(propertyId)
   const { data: tags } = useTags(propertyId)
 
@@ -57,6 +70,21 @@ export function PropertyHistoryView({ propertyId, panelId }: PropertyHistoryView
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-4">
+        {/* Panel scope — only shown when the property has more than one panel */}
+        {panels && panels.length > 1 && (
+          <select
+            value={scope}
+            onChange={e => setScope(e.target.value)}
+            className="text-sm px-2 py-1.5 rounded border border-border bg-background font-medium"
+          >
+            <option value="">Global (all panels)</option>
+            {panels.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        )}
         <select
           value={typeFilter}
           onChange={e => setTypeFilter(e.target.value)}

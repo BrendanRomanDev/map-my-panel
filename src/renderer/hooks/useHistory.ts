@@ -29,6 +29,15 @@ export function useHistoryForProperty(propertyId: string | null) {
   })
 }
 
+// History events scoped to a single panel (its breakers + entities + panel-level)
+export function useHistoryForPanel(panelId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.history.byPanel(panelId || ''),
+    queryFn: () => window.electronAPI.history.listForPanel(panelId!),
+    enabled: !!panelId
+  })
+}
+
 // Event types available for a property (scoped + global)
 export function useEventTypes(propertyId: string | null) {
   return useQuery({

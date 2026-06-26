@@ -42,6 +42,7 @@ export const queryKeys = {
       ['history', 'byTarget', targetType, targetId] as const,
     breakerRollup: (breakerId: string) => ['history', 'breakerRollup', breakerId] as const,
     byProperty: (propertyId: string) => ['history', 'byProperty', propertyId] as const,
+    byPanel: (panelId: string) => ['history', 'byPanel', panelId] as const,
     eventTypes: (propertyId: string) => ['history', 'eventTypes', propertyId] as const,
   },
 } as const

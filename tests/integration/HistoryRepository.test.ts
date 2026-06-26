@@ -155,6 +155,31 @@ describe('HistoryRepository', () => {
     expect(after.event_type_name).toBeNull()
   })
 
+  it('listForPanel includes panel/breaker/entity events, excludes other panels + property-only', () => {
+    // Panel A: a breaker + an entity. Panel B: a breaker.
+    db.prepare("INSERT INTO panels (id, property_id, name, total_positions, main_breaker_amperage) VALUES ('pA', ?, 'A', 20, 200)").run(propertyId)
+    db.prepare("INSERT INTO panels (id, property_id, name, total_positions, main_breaker_amperage) VALUES ('pB', ?, 'B', 20, 200)").run(propertyId)
+    db.prepare("INSERT INTO breakers (id, panel_id, position, breaker_type, amperage, status, is_powered, is_container) VALUES ('brA','pA',1,'single-pole',15,'active',1,0)").run()
+    db.prepare("INSERT INTO breakers (id, panel_id, position, breaker_type, amperage, status, is_powered, is_container) VALUES ('brB','pB',1,'single-pole',15,'active',1,0)").run()
+    db.prepare("INSERT INTO entities (id, panel_id, breaker_ids, entity_type, name) VALUES ('eA','pA','[]','outlet','EA')").run()
+
+    repo.createEvent({ property_id: propertyId, occurred_on: '2026-06-01', targets: [{ target_type: 'panel', target_id: 'pA' }] })
+    repo.createEvent({ property_id: propertyId, occurred_on: '2026-06-02', targets: [{ target_type: 'breaker', target_id: 'brA' }] })
+    repo.createEvent({ property_id: propertyId, occurred_on: '2026-06-03', targets: [{ target_type: 'entity', target_id: 'eA' }] })
+    repo.createEvent({ property_id: propertyId, occurred_on: '2026-06-04', targets: [{ target_type: 'breaker', target_id: 'brB' }] }) // other panel
+    repo.createEvent({ property_id: propertyId, occurred_on: '2026-06-05' }) // property-only (auto-attach)
+
+    const a = repo.listForPanel('pA')
+    expect(a).toHaveLength(3) // panel + breaker + entity on A
+    const occurred = a.map(e => e.occurred_on)
+    expect(occurred).not.toContain('2026-06-04') // not panel B
+    expect(occurred).not.toContain('2026-06-05') // not property-only
+    // newest first
+    expect(occurred[0]).toBe('2026-06-03')
+
+    expect(repo.listForPanel('pB')).toHaveLength(1)
+  })
+
   it('listForBreakerRollup includes direct breaker events AND its entities events', () => {
     // Set up a panel, a breaker, and an entity assigned to that breaker
     const panelId = 'panel-1'

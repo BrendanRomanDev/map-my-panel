@@ -53,6 +53,10 @@ export function registerHistoryHandlers(): void {
     return repo.listForProperty(propertyId)
   })
 
+  ipcMain.handle('history:listForPanel', async (_, panelId: string): Promise<HistoryEventWithDetails[]> => {
+    return repo.listForPanel(panelId)
+  })
+
   ipcMain.handle('history:listForBreakerRollup', async (_, breakerId: string): Promise<RolledUpHistoryEvent[]> => {
     return repo.listForBreakerRollup(breakerId)
   })
