@@ -1,7 +1,7 @@
 # Story 2.4: Event-Type Manager (Settings)
 
 **Epic:** 2 — History Events
-**Status:** Ready for Review
+**Status:** Done — Released v0.2.0
 
 ## Story
 

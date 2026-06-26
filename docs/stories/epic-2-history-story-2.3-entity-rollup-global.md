@@ -1,7 +1,7 @@
 # Story 2.3: Entity History + Roll-up + Global History Tab
 
 **Epic:** 2 — History Events
-**Status:** Ready for Review
+**Status:** Done — Released v0.2.0
 **Architecture ref:** `docs/front-end-spec-tags-and-history.md`
 
 ## Story

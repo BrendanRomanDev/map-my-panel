@@ -1,10 +1,21 @@
 # Map My Panel Product Requirements Document (PRD)
 
-**Version:** 1.0
-**Date:** 2025-10-26
+**Version:** 1.1
+**Date:** 2026-06-26
 **Author:** John (Product Manager) with input from Brendan
-**Status:** Draft
-**Related Documents:** [Project Brief](./brief.md)
+**Status:** Living — MVP shipped (v0.1.0); Tags/History shipped (v0.2.0); MCP ingest delivered
+**Related Documents:** [Project Brief](./brief.md) · [Epics 1 & 2 — Tags & History](./prd/epic-1-2-tags-history.md) · [Epic 3 — MCP Ingest](./prd/epic-3-mcp-ingest.md)
+
+## Epic Registry (post-MVP)
+
+| Epic | Theme | Status | Detail |
+|------|-------|--------|--------|
+| MVP (Phase 1) | Visual panel + entity mapping | Released v0.1.0 | this PRD, §Requirements |
+| Epic 1 | Tags | Released v0.2.0 | `prd/epic-1-2-tags-history.md` |
+| Epic 2 | Service History | Released v0.2.0 | `prd/epic-1-2-tags-history.md` |
+| Epic 3 | MCP Ingest Server (dev tooling) | Delivered | `prd/epic-3-mcp-ingest.md` |
+| Epic 2.5 | Panel-scoped history (next) | In progress | story 2.5 |
+| Epic 4 | Tasks (entity to-dos) | Scoping | `prd/epic-4-tasks.md` (pending) |
 
 ---
 
@@ -31,6 +42,7 @@ Map My Panel addresses this pain point by providing a desktop-first Electron app
 | Date | Version | Description | Author |
 |------|---------|-------------|--------|
 | 2025-10-26 | 1.0 | Initial PRD draft based on Project Brief | John (PM) |
+| 2026-06-26 | 1.1 | Added Epic Registry; recorded Epics 1–3 (Tags, History, MCP Ingest) as delivered; teed up Epic 2.5 (panel-scoped history) and Epic 4 (Tasks) | John (PM) |
 
 ---
 
