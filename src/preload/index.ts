@@ -27,7 +27,11 @@ import type {
   UpdateHistoryEventInput,
   EventType,
   CreateEventTypeInput,
-  UpdateEventTypeInput
+  UpdateEventTypeInput,
+  Task,
+  TaskWithEntity,
+  CreateTaskInput,
+  UpdateTaskInput
 } from '../shared/types'
 
 export interface ElectronAPI {
@@ -113,6 +117,16 @@ export interface ElectronAPI {
     updateEventType: (id: string, input: UpdateEventTypeInput) => Promise<EventType | null>
     deleteEventType: (id: string) => Promise<boolean>
     countEventsForType: (eventTypeId: string) => Promise<number>
+  }
+  tasks: {
+    create: (input: CreateTaskInput) => Promise<Task>
+    update: (id: string, input: UpdateTaskInput) => Promise<Task | null>
+    complete: (id: string) => Promise<Task | null>
+    reopen: (id: string) => Promise<Task | null>
+    delete: (id: string) => Promise<boolean>
+    listForEntity: (entityId: string) => Promise<Task[]>
+    listForPanel: (panelId: string) => Promise<TaskWithEntity[]>
+    openCountForEntity: (entityId: string) => Promise<number>
   }
 }
 
@@ -202,6 +216,16 @@ const electronAPI: ElectronAPI = {
     updateEventType: (id, input) => ipcRenderer.invoke('history:updateEventType', id, input),
     deleteEventType: (id) => ipcRenderer.invoke('history:deleteEventType', id),
     countEventsForType: (eventTypeId) => ipcRenderer.invoke('history:countEventsForType', eventTypeId)
+  },
+  tasks: {
+    create: (input) => ipcRenderer.invoke('tasks:create', input),
+    update: (id, input) => ipcRenderer.invoke('tasks:update', id, input),
+    complete: (id) => ipcRenderer.invoke('tasks:complete', id),
+    reopen: (id) => ipcRenderer.invoke('tasks:reopen', id),
+    delete: (id) => ipcRenderer.invoke('tasks:delete', id),
+    listForEntity: (entityId) => ipcRenderer.invoke('tasks:listForEntity', entityId),
+    listForPanel: (panelId) => ipcRenderer.invoke('tasks:listForPanel', panelId),
+    openCountForEntity: (entityId) => ipcRenderer.invoke('tasks:openCountForEntity', entityId)
   }
 }
 

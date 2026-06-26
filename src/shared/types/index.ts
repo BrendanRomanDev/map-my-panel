@@ -255,3 +255,50 @@ export interface HistoryEventWithDetails extends HistoryEvent {
 export interface RolledUpHistoryEvent extends HistoryEventWithDetails {
   via: 'direct' | { entityId: string; entityName: string }
 }
+
+// ---------------------------------------------------------------------------
+// Tasks (entity-linked to-dos) — see docs/prd/epic-4-tasks.md
+// ---------------------------------------------------------------------------
+
+export const TASK_STATUS = { OPEN: 'open', DONE: 'done' } as const
+export type TaskStatus = (typeof TASK_STATUS)[keyof typeof TASK_STATUS]
+
+// Default task types the UI offers (also accepts custom strings).
+export const DEFAULT_TASK_TYPES = [
+  'Self-Ground',
+  'Map Circuit',
+  'Replace Outlet',
+  'Inspect',
+  'Other'
+] as const
+
+export interface Task {
+  id: string
+  entity_id: string
+  title: string
+  notes: string | null
+  task_type: string | null
+  status: TaskStatus
+  created_at: Date
+  updated_at: Date
+  completed_at: Date | null
+}
+
+export interface CreateTaskInput {
+  entity_id: string
+  title: string
+  notes?: string | null
+  task_type?: string | null
+}
+
+export interface UpdateTaskInput {
+  title?: string
+  notes?: string | null
+  task_type?: string | null
+}
+
+// Task plus its entity's name/room (for the list view without extra lookups).
+export interface TaskWithEntity extends Task {
+  entity_name: string
+  entity_room: string | null
+}

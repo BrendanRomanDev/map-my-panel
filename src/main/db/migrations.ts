@@ -667,4 +667,30 @@ export function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('012_polymorphic_link_integrity')
     console.log('Migration 012_polymorphic_link_integrity completed')
   }
+
+  // Migration 013: Tasks (entity-linked to-dos). Additive — new table only.
+  if (!appliedMigrations.includes('013_add_tasks')) {
+    console.log('Running migration: 013_add_tasks')
+
+    database.exec(`
+      CREATE TABLE tasks (
+        id           TEXT PRIMARY KEY,
+        entity_id    TEXT NOT NULL,
+        title        TEXT NOT NULL,
+        notes        TEXT,
+        task_type    TEXT,
+        status       TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+        created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+        completed_at DATETIME,
+        FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX idx_tasks_entity ON tasks(entity_id);
+      CREATE INDEX idx_tasks_status ON tasks(status);
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('013_add_tasks')
+    console.log('Migration 013_add_tasks completed')
+  }
 }

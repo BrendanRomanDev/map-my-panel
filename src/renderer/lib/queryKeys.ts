@@ -45,6 +45,14 @@ export const queryKeys = {
     byPanel: (panelId: string) => ['history', 'byPanel', panelId] as const,
     eventTypes: (propertyId: string) => ['history', 'eventTypes', propertyId] as const,
   },
+
+  // Task keys
+  tasks: {
+    all: ['tasks'] as const,
+    byEntity: (entityId: string) => ['tasks', 'byEntity', entityId] as const,
+    byPanel: (panelId: string) => ['tasks', 'byPanel', panelId] as const,
+    openCount: (entityId: string) => ['tasks', 'openCount', entityId] as const,
+  },
 } as const
 
 /**

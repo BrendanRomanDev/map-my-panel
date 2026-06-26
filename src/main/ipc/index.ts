@@ -6,6 +6,7 @@ import { registerBackupHandlers } from './backupHandlers'
 import { registerSeedHandlers } from './seedHandlers'
 import { registerTagHandlers } from './tagHandlers'
 import { registerHistoryHandlers } from './historyHandlers'
+import { registerTaskHandlers } from './taskHandlers'
 
 export function registerAllHandlers(): void {
   registerPropertyHandlers()
@@ -16,4 +17,5 @@ export function registerAllHandlers(): void {
   registerSeedHandlers()
   registerTagHandlers()
   registerHistoryHandlers()
+  registerTaskHandlers()
 }
