@@ -91,8 +91,14 @@ describe('Panel import (MCP)', () => {
     // Range double-pole 2 ↔ 4
     expect(byKey.get('2')!.linked_breaker_id).toBe(byKey.get('4')!.id)
 
+    // Range entity is on BOTH halves of the double-pole pair
+    const entRepo = new EntityRepository(db)
+    const rangeOn2 = entRepo.listByBreaker(byKey.get('2')!.id).find(e => e.name === 'Range')!
+    expect(rangeOn2.breaker_ids).toHaveLength(2)
+    expect(entRepo.listByBreaker(byKey.get('4')!.id).some(e => e.name === 'Range')).toBe(true)
+
     // Multi-device breaker 1 → 4 entities
-    const entities = new EntityRepository(db).listByBreaker(byKey.get('1')!.id)
+    const entities = entRepo.listByBreaker(byKey.get('1')!.id)
     expect(entities).toHaveLength(4)
 
     // Blank stayed a spare

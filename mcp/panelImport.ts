@@ -250,7 +250,9 @@ export function applyImport(
       }
     }
 
-    // Double-pole links — set both sides to double-pole + cross-link.
+    // Double-pole links — set both sides to double-pole + cross-link, and
+    // sync entities so an appliance spanning the pair (e.g. Range on 2+4) is
+    // attached to BOTH breakers, matching the app's own behavior.
     for (const l of plan.links) {
       const a = parsePos(l.aPosition)
       const b = parsePos(l.bPosition)
@@ -259,6 +261,20 @@ export function applyImport(
       if (!aId || !bId) continue
       breakerRepo.update(aId, { breaker_type: 'double-pole', linked_breaker_id: bId })
       breakerRepo.update(bId, { breaker_type: 'double-pole', linked_breaker_id: aId })
+
+      // Any entity on either half should be on both.
+      const onEither = [...entityRepo.listByBreaker(aId), ...entityRepo.listByBreaker(bId)]
+      const seen = new Set<string>()
+      for (const ent of onEither) {
+        if (seen.has(ent.id)) continue
+        seen.add(ent.id)
+        const ids = new Set(ent.breaker_ids)
+        ids.add(aId)
+        ids.add(bId)
+        if (ids.size !== ent.breaker_ids.length) {
+          entityRepo.update(ent.id, { breaker_ids: [...ids] })
+        }
+      }
       linksCreated++
     }
   })
