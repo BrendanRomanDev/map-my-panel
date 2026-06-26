@@ -10,8 +10,11 @@ import {
   PanelImportPlanSchema,
   PanelBreakerShape,
   PanelLinkShape,
+  AddEntityShape,
+  AddEntitySchema,
   dryRunImport,
-  applyImport
+  applyImport,
+  addEntities
 } from './panelImport'
 import { PropertyRepository, PanelRepository, BreakerRepository } from '../src/main/db/repositories'
 
@@ -115,6 +118,31 @@ server.registerTool(
       const path = join(outDir, `map-my-panel-backup-${backup.exportDate.replace(/[:.]/g, '-')}.json`)
       writeFileSync(path, JSON.stringify(backup, null, 2), 'utf-8')
       return text({ backupPath: path, version: backup.version })
+    } finally {
+      db.close()
+    }
+  }
+)
+
+// 5) add_entities — create entities (optionally unmapped / breaker-less)
+server.registerTool(
+  'add_entities',
+  {
+    title: 'Add entities',
+    description:
+      'Create one or more entities on a panel. Omit breakerPosition to leave an entity UNMAPPED (it shows a sidebar warning until traced). Use breakerPosition ("12", "17b") to assign to an existing breaker. Auto-backs-up before writing.',
+    inputSchema: {
+      panelId: z.string().describe('Target panel id (from get_context).'),
+      entities: z.array(z.object(AddEntityShape)).describe('Entities to create. Each may set room/location and an optional breakerPosition.')
+    }
+  },
+  async ({ panelId, entities }) => {
+    const db = openDatabase()
+    try {
+      const parsed = z.array(AddEntitySchema).parse(entities)
+      const backupDir = process.env.MAP_MY_PANEL_BACKUP_DIR || join(homedir(), 'Documents', 'map-my-panel-backups')
+      mkdirSync(backupDir, { recursive: true })
+      return text(addEntities(db, panelId, parsed, backupDir))
     } finally {
       db.close()
     }

@@ -162,6 +162,29 @@ describe('Panel import (MCP)', () => {
     expect(base.label).toBe('Home Office') // label still updated
   })
 
+  it('addEntities creates unmapped entities and assigns by breaker position', async () => {
+    const { addEntities, AddEntitySchema } = await import('../../mcp/panelImport')
+    const { z } = await import('zod')
+    // Need a breaker to assign one entity to
+    new BreakerRepository(db).create({ panel_id: panelId, position: 5, breaker_type: 'single-pole', amperage: 15, status: 'active' })
+
+    const input = z.array(AddEntitySchema).parse([
+      { name: 'Office NW Outlet', entity_type: 'outlet', room: 'Office' }, // unmapped
+      { name: 'Mapped Thing', entity_type: 'outlet', room: 'Kitchen', breakerPosition: '5' }
+    ])
+    const r = addEntities(db, panelId, input, tmpdir())
+    expect(r.created).toBe(2)
+    expect(r.unmapped).toBe(1)
+
+    const entRepo = new EntityRepository(db)
+    const all = entRepo.listByPanel(panelId)
+    const office = all.find(e => e.name === 'Office NW Outlet')!
+    expect(office.breaker_ids).toEqual([]) // unmapped
+    expect(office.room).toBe('Office')
+    const mapped = all.find(e => e.name === 'Mapped Thing')!
+    expect(mapped.breaker_ids).toHaveLength(1)
+  })
+
   it('re-running an import updates existing breakers instead of duplicating', () => {
     const plan = PanelImportPlanSchema.parse(REAL_PANEL)
     applyImport(db, panelId, plan, tmpdir())

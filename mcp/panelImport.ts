@@ -274,3 +274,79 @@ export function applyImport(
     linksCreated
   }
 }
+
+// ---- Add entities (standalone; may be unmapped) -------------------------
+
+export const AddEntityShape = {
+  name: z.string(),
+  entity_type: z.string().default('outlet'),
+  room: z.string().nullable().optional(),
+  // Physical locator and/or notes (shows in the UI). Notes fold in here.
+  location: z.string().nullable().optional(),
+  // Optional breaker to assign to, by position string ("12", "17b"). Omit to
+  // leave the entity UNMAPPED (shows the sidebar warning until traced).
+  breakerPosition: z.string().nullable().optional()
+}
+export const AddEntitySchema = z.object(AddEntityShape)
+export type AddEntityInput = z.infer<typeof AddEntitySchema>
+
+export interface AddEntitiesResult {
+  summary: string
+  backupPath: string
+  created: number
+  unmapped: number
+}
+
+// Creates entities (optionally unmapped) on a panel. Auto-backs-up first, runs
+// in a transaction. Used for the "trace it later" items that have a room but no
+// breaker yet, and for adding to an existing breaker by position.
+export function addEntities(
+  db: Database.Database,
+  panelId: string,
+  entities: AddEntityInput[],
+  backupDir: string
+): AddEntitiesResult {
+  const backup = new BackupRepository(db).exportDatabase()
+  const backupPath = `${backupDir.replace(/\/$/, '')}/map-my-panel-backup-pre-add-${backup.exportDate.replace(/[:.]/g, '-')}.json`
+  writeFileSync(backupPath, JSON.stringify(backup, null, 2), 'utf-8')
+
+  const breakerRepo = new BreakerRepository(db)
+  const entityRepo = new EntityRepository(db)
+
+  let created = 0
+  let unmapped = 0
+
+  const run = db.transaction(() => {
+    const existing = breakerRepo.listByPanel(panelId)
+    const byPos = new Map(existing.map(b => [posKey(b.position, b.position_slot), b.id]))
+
+    for (const e of entities) {
+      let breakerIds: string[] = []
+      if (e.breakerPosition) {
+        const p = parsePos(e.breakerPosition)
+        const id = byPos.get(posKey(p.position, p.slot))
+        if (id) breakerIds = [id]
+      }
+      if (breakerIds.length === 0) unmapped++
+
+      entityRepo.create({
+        panel_id: panelId,
+        breaker_ids: breakerIds,
+        entity_type: e.entity_type,
+        name: e.name,
+        room: e.room ?? null,
+        location: e.location ?? null
+      })
+      created++
+    }
+  })
+
+  run()
+
+  return {
+    summary: `Added ${created} entit${created === 1 ? 'y' : 'ies'} (${unmapped} unmapped).`,
+    backupPath,
+    created,
+    unmapped
+  }
+}
