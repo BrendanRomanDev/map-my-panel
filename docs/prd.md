@@ -14,8 +14,8 @@
 | Epic 1 | Tags | Released v0.2.0 | `prd/epic-1-2-tags-history.md` |
 | Epic 2 | Service History | Released v0.2.0 | `prd/epic-1-2-tags-history.md` |
 | Epic 3 | MCP Ingest Server (dev tooling) | Delivered | `prd/epic-3-mcp-ingest.md` |
-| Epic 2.5 | Panel-scoped history (next) | In progress | story 2.5 |
-| Epic 4 | Tasks (entity to-dos) | Scoping | `prd/epic-4-tasks.md` (pending) |
+| Epic 2.5 | Panel-scoped history | Done (story 2.5) — pending release | story 2.5 |
+| Epic 4 | Tasks (entity to-dos) | Scoped — stories 4.1, 4.2 ready | `prd/epic-4-tasks.md` |
 
 ---
 
