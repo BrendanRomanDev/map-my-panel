@@ -1,7 +1,22 @@
 # Story 4.2: Tasks UI + Generate-from-Warnings + Confirmed Completion
 
 **Epic:** 4 — Tasks
-**Status:** Approved (ready for dev) — depends on 4.1
+**Status:** Done — pending release
+
+## Dev Agent Record
+
+### File List
+**New:** `src/renderer/components/tasks/TasksView.tsx`, `CompleteTaskModal.tsx`, `generateTasks.ts`; `src/renderer/hooks/useTasks.ts`; `tests/integration/generateTasks.test.ts`
+**Modified:** `src/renderer/components/layout/MainLayout.tsx` (Tasks tab), `src/renderer/lib/queryKeys.ts` (task keys)
+
+### Completion Notes
+- Tasks top-level tab (clipboard icon): list with open/done/all filter, add, complete, reopen, delete.
+- Generate-from-warnings: scans for unmapped entities (→ Map Circuit) and Needs-Grounding entities (→ Self-Ground, with 2P note); skips entities that already have a matching open task; user picks which to create.
+- Confirmed completion (CompleteTaskModal): for Self-Ground, proposes removing Needs Grounding/2P + adding Self-Grounding/3P; optional history event (pre-filled, editable); all confirmed before applying. Marks task done.
+- 69 tests pass (5 TaskRepository + 4 generateTasks), typecheck 0, build OK.
+
+### Change Log
+- 2026-06-26: Tasks UI + generation + confirmed completion loop.
 **Refs:** `docs/prd/epic-4-tasks.md`
 
 ## Story

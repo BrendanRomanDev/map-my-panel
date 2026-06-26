@@ -1,7 +1,7 @@
 # Story 4.1: Tasks Data Layer
 
 **Epic:** 4 — Tasks
-**Status:** Approved (ready for dev)
+**Status:** Done — pending release
 **Refs:** `docs/prd/epic-4-tasks.md`
 
 ## Story

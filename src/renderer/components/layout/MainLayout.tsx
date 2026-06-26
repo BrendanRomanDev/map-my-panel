@@ -6,6 +6,7 @@ import { ByBreakerView } from '../entities/ByBreakerView'
 import { BreakerPanelGrid } from '../breaker-panel/BreakerPanelGrid'
 import { SettingsView } from '../settings/SettingsView'
 import { PropertyHistoryView } from '../history/PropertyHistoryView'
+import { TasksView } from '../tasks/TasksView'
 import { AddEntityModal } from '../entities/AddEntityModal'
 import { AddPanelModal } from '../property/AddPanelModal'
 import { PropertySelectorModal } from '../property/PropertySelectorModal'
@@ -32,6 +33,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [showSettings, setShowSettings] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [showTasks, setShowTasks] = useState(false)
   const [showAddEntityModal, setShowAddEntityModal] = useState(false)
   const [showAddPanelModal, setShowAddPanelModal] = useState(false)
   const [showPropertyModal, setShowPropertyModal] = useState(false)
@@ -200,7 +202,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
       <header className="border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {!showSettings && !showHistory ? (
+            {!showSettings && !showHistory && !showTasks ? (
               <div className="flex items-center gap-2">
                 {allProperties && allProperties.length > 1 && (
                   <button
@@ -224,6 +226,8 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
               </div>
             ) : showHistory ? (
               <h1 className="text-xl font-bold">Property History</h1>
+            ) : showTasks ? (
+              <h1 className="text-xl font-bold">Tasks</h1>
             ) : (
               <h1 className="text-xl font-bold">Settings</h1>
             )}
@@ -231,8 +235,22 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
           <div className="flex items-center gap-4">
             <button
               onClick={() => {
+                setShowTasks(!showTasks)
+                setShowHistory(false)
+                setShowSettings(false)
+              }}
+              className={`p-2 rounded-md transition-colors ${showTasks ? 'bg-muted' : 'hover:bg-muted'}`}
+              title={showTasks ? 'Back to Panel' : 'Tasks'}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7l2 2 4-4" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
                 setShowHistory(!showHistory)
                 setShowSettings(false)
+                setShowTasks(false)
               }}
               className={`p-2 rounded-md transition-colors ${showHistory ? 'bg-muted' : 'hover:bg-muted'}`}
               title={showHistory ? 'Back to Panel' : 'Property History'}
@@ -245,6 +263,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
               onClick={() => {
                 setShowSettings(!showSettings)
                 setShowHistory(false)
+                setShowTasks(false)
               }}
               className="p-2 hover:bg-muted rounded-md transition-colors"
               title={showSettings ? 'Back to Panel' : 'Settings'}
@@ -266,7 +285,14 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
 
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden" onClick={() => setSelectedEntityId(null)}>
-        {showHistory ? (
+        {showTasks ? (
+          /* Tasks View - Full Width */
+          <div className="flex-1 p-6 overflow-auto">
+            <div className="max-w-3xl mx-auto">
+              <TasksView propertyId={property.id} panelId={panel.id} />
+            </div>
+          </div>
+        ) : showHistory ? (
           /* Property History View - Full Width */
           <div className="flex-1 p-6 overflow-auto">
             <div className="max-w-3xl mx-auto">
