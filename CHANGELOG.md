@@ -2,7 +2,19 @@
 
 All notable changes to Map My Panel are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses [Semantic Versioning](https://semver.org/).
 
-## [0.2.0] — 2026-06-23
+## [0.3.0] — 2026-06-29
+
+Adds a Tasks punch-list and panel-scoped history filtering.
+
+### Added
+
+- **Tasks** — an entity-linked to-do list (new Tasks tab). Add tasks, mark them done/reopen, filter by open/done. **Generate from warnings** scans the panel and proposes tasks for unmapped entities ("Map Circuit") and ungrounded outlets ("Self-Ground"). Completing a task opens a guided step that proposes the resulting changes — e.g. finishing a self-ground flips the grounding tags (remove "Needs Grounding"/"2P", add "Self-Grounding"/"3P") and optionally logs a history event — all confirmed before applying.
+- **Panel-scoped history** — the Property History view can now be filtered by panel (Global / per-panel) for properties with more than one panel. Property-level events stay under Global.
+
+### Notes (developer tooling)
+
+- The MCP ingest server gained `add_entities` and `apply_tags` tools and several import fixes during real-data use; documented as Epic 3.
+
 
 Adds a Tags & Service-History system for documenting electrical conditions and work over time.
 
