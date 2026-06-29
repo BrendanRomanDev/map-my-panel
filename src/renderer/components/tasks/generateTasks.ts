@@ -1,4 +1,4 @@
-import type { Entity, Tag, TaskWithEntity } from '@shared/types'
+import type { Entity, TaskWithEntity } from '@shared/types'
 
 export interface TaskCandidate {
   entityId: string
@@ -8,47 +8,41 @@ export interface TaskCandidate {
   notes: string | null
 }
 
-// Pure: derive task suggestions from the app's own signals —
-//  - entities with NO breaker  → "Map Circuit"
-//  - entities tagged "Needs Grounding" → "Self-Ground"
-// Skips entities that already have an OPEN task of that type (no dupes).
+// Pure: derive task suggestions from OBJECTIVE FACTS only — never from tags.
+// The app stays unopinionated about electrical protocol; condition-based work
+// (grounding, GFCI, etc.) is left to the user / the Claude agent (MCP), which
+// can reason over tags and the user's own rules. The only thing the app itself
+// asserts is documentation completeness:
+//
+//   - entity has no breaker OR no room  → suggest a "Map Circuit" task
+//     (matches the two existing sidebar warnings: the no-breaker icon and the
+//      "Unassigned" room group).
+//
+// Skips entities that already have an OPEN Map Circuit task (no dupes).
 export function generateTaskCandidates(
   entities: Entity[],
-  tagsForTarget: { entityId: string; tagNames: string[] }[],
   existingTasks: TaskWithEntity[]
 ): TaskCandidate[] {
-  const openByEntityType = new Set(
-    existingTasks.filter(t => t.status === 'open').map(t => `${t.entity_id}::${t.task_type || ''}`)
+  const openMapByEntity = new Set(
+    existingTasks.filter(t => t.status === 'open' && t.task_type === 'Map Circuit').map(t => t.entity_id)
   )
-  const hasOpen = (entityId: string, type: string) => openByEntityType.has(`${entityId}::${type}`)
 
-  const tagMap = new Map(tagsForTarget.map(x => [x.entityId, x.tagNames.map(n => n.toLowerCase())]))
   const out: TaskCandidate[] = []
 
   for (const e of entities) {
-    // Unmapped → Map Circuit. Title carries the specifics; the type is shown
-    // separately as a chip, so don't repeat "Map circuit" in the title.
-    if (e.breaker_ids.length === 0 && !hasOpen(e.id, 'Map Circuit')) {
-      out.push({
-        entityId: e.id,
-        entityName: e.name,
-        title: `Find the breaker for "${e.name}"`,
-        taskType: 'Map Circuit',
-        notes: e.room ? `Room: ${e.room}` : null
-      })
-    }
-    // Needs Grounding → Self-Ground
-    const tagNames = tagMap.get(e.id) || []
-    if (tagNames.includes('needs grounding') && !hasOpen(e.id, 'Self-Ground')) {
-      const twoProng = tagNames.includes('2p')
-      out.push({
-        entityId: e.id,
-        entityName: e.name,
-        title: `Install self-grounding box on "${e.name}"`,
-        taskType: 'Self-Ground',
-        notes: twoProng ? 'Currently 2-prong/ungrounded — note the amperage.' : 'Ungrounded — self-grounding box or GFCI.'
-      })
-    }
+    const noBreaker = e.breaker_ids.length === 0
+    const noRoom = !e.room || e.room.trim() === ''
+    if (!(noBreaker || noRoom)) continue
+    if (openMapByEntity.has(e.id)) continue
+
+    const missing = [noBreaker ? 'breaker' : null, noRoom ? 'room' : null].filter(Boolean).join(' and ')
+    out.push({
+      entityId: e.id,
+      entityName: e.name,
+      title: `Map "${e.name}"`,
+      taskType: 'Map Circuit',
+      notes: `Missing ${missing}.${e.room ? ` Room: ${e.room}.` : ''}`
+    })
   }
   return out
 }

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import type { TaskWithEntity, Entity } from '@shared/types'
 import { DEFAULT_TASK_TYPES } from '@shared/types'
 import { useTasksForPanel } from '../../hooks/useTasks'
@@ -112,7 +112,6 @@ export function TasksView({ propertyId, panelId }: TasksViewProps) {
 
       {showGenerate && (
         <GenerateTasksModal
-          panelId={panelId}
           entities={entities || []}
           existingTasks={tasks || []}
           onClose={() => setShowGenerate(false)}
@@ -189,33 +188,13 @@ function AddTaskModal({ entities, onClose, onSaved }: { entities: Entity[]; onCl
   )
 }
 
-// ---- Generate from warnings ----
-function GenerateTasksModal({ panelId, entities, existingTasks, onClose, onCreated }: {
-  panelId: string; entities: Entity[]; existingTasks: TaskWithEntity[]; onClose: () => void; onCreated: () => void
+// ---- Suggested Tasks (objective facts only — no tag inspection) ----
+function GenerateTasksModal({ entities, existingTasks, onClose, onCreated }: {
+  entities: Entity[]; existingTasks: TaskWithEntity[]; onClose: () => void; onCreated: () => void
 }) {
-  // Resolve each entity's tag names (for the Needs-Grounding signal).
-  const { data: tagsForEntities } = useQuery({
-    queryKey: ['tasks', 'genTags', panelId, entities.map(e => e.id).join(',')],
-    queryFn: async () => {
-      const out: { entityId: string; tagNames: string[] }[] = []
-      for (const e of entities) {
-        const ts = await window.electronAPI.tags.listForTarget('entity', e.id)
-        out.push({ entityId: e.id, tagNames: ts.map(t => t.name) })
-      }
-      return out
-    }
-  })
-
-  const candidates = tagsForEntities ? generateTaskCandidates(entities, tagsForEntities, existingTasks) : []
-  const [picked, setPicked] = useState<Set<number>>(new Set())
+  const candidates = generateTaskCandidates(entities, existingTasks)
+  const [picked, setPicked] = useState<Set<number>>(() => new Set(candidates.map((_, i) => i)))
   const [saving, setSaving] = useState(false)
-
-  // Default-select all candidates once the per-entity tags have loaded.
-  useEffect(() => {
-    if (!tagsForEntities) return
-    const all = generateTaskCandidates(entities, tagsForEntities, existingTasks).map((_, i) => i)
-    setPicked(new Set(all))
-  }, [tagsForEntities, entities, existingTasks])
 
   const toggle = (i: number) => {
     const next = new Set(picked); next.has(i) ? next.delete(i) : next.add(i); setPicked(next)
@@ -249,7 +228,7 @@ function GenerateTasksModal({ panelId, entities, existingTasks, onClose, onCreat
         {/* Scrollable body */}
         <div className="flex-1 overflow-auto p-6 py-3">
           {candidates.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nothing to suggest — no unmapped or ungrounded entities without tasks. 🎉</p>
+            <p className="text-sm text-muted-foreground">Nothing to suggest — every entity has a breaker and a room (or already has a mapping task). 🎉</p>
           ) : (
             <div className="space-y-2">
               <div className="flex items-center justify-between pb-1">
