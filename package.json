@@ -30,7 +30,10 @@
     "dist:mac": "npm run build && electron-builder --mac",
     "dist:win": "npm run build && electron-builder --win",
     "dist:all": "npm run build && electron-builder --mac --win",
-    "dist:dir": "npm run build && electron-builder --dir"
+    "dist:dir": "npm run build && electron-builder --dir",
+    "postdist:mac": "electron-rebuild -f -w better-sqlite3",
+    "postdist:all": "electron-rebuild -f -w better-sqlite3",
+    "postdist:dir": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
