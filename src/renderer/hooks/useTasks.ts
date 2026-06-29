@@ -27,3 +27,13 @@ export function useOpenTaskCount(entityId: string | null) {
     enabled: !!entityId
   })
 }
+
+// Task templates for a property (includes globals). Powers save-as-template
+// and bulk-apply-to-many.
+export function useTaskTemplates(propertyId: string | null) {
+  return useQuery({
+    queryKey: queryKeys.tasks.templates(propertyId || ''),
+    queryFn: () => window.electronAPI.tasks.listTemplates(propertyId!),
+    enabled: !!propertyId
+  })
+}

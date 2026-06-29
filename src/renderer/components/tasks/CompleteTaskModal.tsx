@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { TaskWithEntity, Tag } from '@shared/types'
+import type { TaskWithEntity } from '@shared/types'
+import { useTags } from '../../hooks/useTags'
 import { queryKeys } from '../../lib/queryKeys'
+import { tagColorClasses } from '../tags/tagColors'
 
 interface CompleteTaskModalProps {
   task: TaskWithEntity
@@ -11,67 +13,46 @@ interface CompleteTaskModalProps {
   onDone: () => void
 }
 
-function todayYmd(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-
-// Guided completion: proposes the side-effects (tag flips + optional history
-// event) for the user to confirm/edit before applying. Never auto-applies.
+// Guided completion driven entirely by the task's stored rules — no hardcoded
+// task-type branches. Shows exactly which tags will flip and lets the user
+// confirm/skip each side-effect before applying. The backend applies the
+// confirmed subset in one transaction (completeWithRules).
 export function CompleteTaskModal({ task, propertyId, panelId, onClose, onDone }: CompleteTaskModalProps) {
   const queryClient = useQueryClient()
-  const isSelfGround = task.task_type === 'Self-Ground'
-  const isMapCircuit = task.task_type === 'Map Circuit'
+  const { data: allTags } = useTags(propertyId)
+  const tags = allTags || []
+  const nameOf = (id: string) => tags.find(t => t.id === id)
+  const tagChip = (id: string) => {
+    const tag = nameOf(id)
+    if (!tag) return null
+    return (
+      <span key={id} className={`px-1.5 py-0.5 rounded text-xs font-medium ${tagColorClasses(tag.color)}`}>
+        {tag.icon ? `${tag.icon} ` : ''}{tag.name}
+      </span>
+    )
+  }
 
-  // Side-effect toggles (defaults depend on task type)
-  const [applyTagChanges, setApplyTagChanges] = useState(isSelfGround)
-  const [logHistory, setLogHistory] = useState(true)
+  const hasRemove = task.on_complete_remove_tag_ids.length > 0
+  const hasAdd = task.on_complete_add_tag_ids.length > 0
+  const hasTagRules = hasRemove || hasAdd
+
+  // Each side-effect can be skipped at completion time. Tag flips default on
+  // when configured; history defaults to the task's stored preference (and on
+  // for legacy tasks that have no rules, so completing still records something).
+  const [applyTags, setApplyTags] = useState(hasTagRules)
+  const [logHistory, setLogHistory] = useState(task.on_complete_log_history || !hasTagRules)
   const [historyNote, setHistoryNote] = useState(task.title)
-  const [currentTags, setCurrentTags] = useState<Tag[]>([])
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    window.electronAPI.tags.listForTarget('entity', task.entity_id).then(setCurrentTags)
-  }, [task.entity_id])
-
-  const tagNames = new Set(currentTags.map(t => t.name.toLowerCase()))
-  // For Self-Ground: what we'll remove / add
-  const toRemove = ['Needs Grounding', '2P'].filter(n => tagNames.has(n.toLowerCase()))
-  const toAdd = ['Grounded to Box (Self-Grounding)', '3P'].filter(n => !tagNames.has(n.toLowerCase()))
 
   const apply = async () => {
     setSaving(true)
     try {
-      // 1) Tag changes (Self-Ground)
-      if (isSelfGround && applyTagChanges) {
-        const propTags = await window.electronAPI.tags.listForProperty(propertyId)
-        const byName = (n: string) => propTags.find(t => t.name.toLowerCase() === n.toLowerCase())
-        for (const name of toRemove) {
-          const tag = byName(name)
-          if (tag) await window.electronAPI.tags.detach(tag.id, 'entity', task.entity_id)
-        }
-        for (const name of toAdd) {
-          let tag = byName(name)
-          if (!tag) tag = await window.electronAPI.tags.create({ property_id: propertyId, name })
-          await window.electronAPI.tags.attach(tag.id, 'entity', task.entity_id)
-        }
-      }
-
-      // 2) Optional history event on the entity
-      if (logHistory) {
-        await window.electronAPI.history.createEvent({
-          property_id: propertyId,
-          event_type_id: null,
-          notes: historyNote.trim() || task.title,
-          occurred_on: todayYmd(),
-          targets: [{ target_type: 'entity', target_id: task.entity_id }]
-        })
-      }
-
-      // 3) Mark the task done
-      await window.electronAPI.tasks.complete(task.id)
-
-      // Refresh everything touched
+      await window.electronAPI.tasks.completeWithRules(task.id, propertyId, {
+        removeTagIds: applyTags ? task.on_complete_remove_tag_ids : [],
+        addTagIds: applyTags ? task.on_complete_add_tag_ids : [],
+        logHistory,
+        historyNote: historyNote.trim() || task.title
+      })
       queryClient.invalidateQueries({ queryKey: queryKeys.tags.byTarget('entity', task.entity_id) })
       queryClient.invalidateQueries({ queryKey: ['tags'] })
       queryClient.invalidateQueries({ queryKey: ['history'] })
@@ -92,22 +73,28 @@ export function CompleteTaskModal({ task, propertyId, panelId, onClose, onDone }
         </div>
 
         <div className="flex-1 overflow-auto p-6 py-4 space-y-3">
-          {isSelfGround && (
+          {hasTagRules && (
             <label className="flex items-start gap-2 text-sm">
-              <input type="checkbox" checked={applyTagChanges} onChange={e => setApplyTagChanges(e.target.checked)} className="mt-0.5" />
-              <span>
-                Update grounding tags
-                <span className="block text-xs text-muted-foreground">
-                  {toRemove.length ? `Remove: ${toRemove.join(', ')}. ` : ''}{toAdd.length ? `Add: ${toAdd.join(', ')}.` : ''}
-                  {!toRemove.length && !toAdd.length ? 'No tag changes needed.' : ''}
-                </span>
+              <input type="checkbox" checked={applyTags} onChange={e => setApplyTags(e.target.checked)} className="mt-0.5" />
+              <span className="space-y-1">
+                <span className="block">Apply tag changes to {task.entity_name}</span>
+                {hasRemove && (
+                  <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                    Remove: {task.on_complete_remove_tag_ids.map(tagChip)}
+                  </span>
+                )}
+                {hasAdd && (
+                  <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
+                    Add: {task.on_complete_add_tag_ids.map(tagChip)}
+                  </span>
+                )}
               </span>
             </label>
           )}
 
-          {isMapCircuit && (
+          {!hasTagRules && (
             <p className="text-sm text-muted-foreground">
-              After completing, assign this entity to its breaker from the entity's edit screen.
+              No tag rules wired to this task — completing just marks it done.
             </p>
           )}
 
@@ -126,7 +113,7 @@ export function CompleteTaskModal({ task, propertyId, panelId, onClose, onDone }
           </label>
         </div>
 
-        <div className="flex-shrink-0 flex justify-end gap-2 p-4 border-t border-border rounded-b-lg">
+        <div className="flex-shrink-0 flex justify-end gap-2 p-4 border-t border-border bg-background rounded-b-lg">
           <button onClick={onClose} className="text-sm px-3 py-1.5 rounded border border-border hover:bg-muted">Cancel</button>
           <button onClick={apply} disabled={saving} className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground disabled:opacity-50">
             {saving ? 'Completing…' : 'Complete'}
