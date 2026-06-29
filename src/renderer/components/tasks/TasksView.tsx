@@ -42,7 +42,7 @@ export function TasksView({ propertyId, panelId }: TasksViewProps) {
             onClick={() => setShowGenerate(true)}
             className="text-sm px-3 py-1.5 rounded border border-border hover:bg-muted"
           >
-            ⚡ Generate from warnings
+            ✨ Suggested Tasks
           </button>
           <button
             onClick={() => setShowAdd(true)}
@@ -82,7 +82,12 @@ export function TasksView({ propertyId, panelId }: TasksViewProps) {
               />
               <div className="flex-1 min-w-0">
                 <div className={`text-sm font-medium ${t.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-                  {t.task_type ? `[${t.task_type}] ` : ''}{t.title}
+                  {t.task_type && (
+                    <span className="inline-block text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground mr-1.5 align-middle no-underline">
+                      {t.task_type}
+                    </span>
+                  )}
+                  {t.title}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {t.entity_name}{t.entity_room ? ` · ${t.entity_room}` : ''}
@@ -147,9 +152,11 @@ function AddTaskModal({ entities, onClose, onSaved }: { entities: Entity[]; onCl
 
   return (
     <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
-      <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full">
-        <h3 className="text-lg font-bold mb-4">Add Task</h3>
-        <div className="space-y-3">
+      <div className="bg-background border border-border rounded-lg max-w-md w-full max-h-[85vh] flex flex-col">
+        <div className="flex-shrink-0 p-6 pb-3 border-b border-border">
+          <h3 className="text-lg font-bold">Add Task</h3>
+        </div>
+        <div className="flex-1 overflow-auto p-6 py-4 space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">Entity</label>
             <select value={entityId} onChange={e => setEntityId(e.target.value)} className="w-full text-sm px-2 py-2 rounded border border-border bg-background">
@@ -173,7 +180,7 @@ function AddTaskModal({ entities, onClose, onSaved }: { entities: Entity[]; onCl
             <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="w-full text-sm px-2 py-2 rounded border border-border bg-background" />
           </div>
         </div>
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="flex-shrink-0 flex justify-end gap-2 p-4 border-t border-border rounded-b-lg">
           <button onClick={onClose} className="text-sm px-3 py-1.5 rounded border border-border hover:bg-muted">Cancel</button>
           <button onClick={save} disabled={saving || !entityId || !title.trim()} className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground disabled:opacity-50">Add</button>
         </div>
@@ -228,27 +235,39 @@ function GenerateTasksModal({ panelId, entities, existingTasks, onClose, onCreat
 
   return (
     <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
-      <div className="bg-background border border-border rounded-lg p-6 max-w-lg w-full max-h-[85vh] overflow-auto">
-        <h3 className="text-lg font-bold mb-2">Generate Tasks from Warnings</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          Found {candidates.length} suggestion{candidates.length === 1 ? '' : 's'} (skips entities that already have a matching open task).
-        </p>
-        {candidates.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing to generate — no unmapped or ungrounded entities without tasks. 🎉</p>
-        ) : (
-          <div className="space-y-2">
-            {candidates.map((c, i) => (
-              <label key={i} className="flex items-start gap-2 p-2 border border-border rounded text-sm cursor-pointer">
-                <input type="checkbox" checked={picked.has(i)} onChange={() => toggle(i)} className="mt-0.5" />
-                <span>
-                  <span className="font-medium">[{c.taskType}] {c.title}</span>
-                  <span className="block text-xs text-muted-foreground">{c.entityName}{c.notes ? ` — ${c.notes}` : ''}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-        )}
-        <div className="flex justify-end gap-2 mt-4">
+      <div className="bg-background border border-border rounded-lg max-w-lg w-full max-h-[85vh] flex flex-col">
+        {/* Header */}
+        <div className="flex-shrink-0 p-6 pb-3 border-b border-border">
+          <h3 className="text-lg font-bold">Suggested Tasks</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {candidates.length} suggestion{candidates.length === 1 ? '' : 's'} from your panel — skips entities that already have a matching open task.
+          </p>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-auto p-6 py-3">
+          {candidates.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing to suggest — no unmapped or ungrounded entities without tasks. 🎉</p>
+          ) : (
+            <div className="space-y-2">
+              {candidates.map((c, i) => (
+                <label key={i} className="flex items-start gap-2 p-2 border border-border rounded text-sm cursor-pointer">
+                  <input type="checkbox" checked={picked.has(i)} onChange={() => toggle(i)} className="mt-0.5" />
+                  <span className="min-w-0">
+                    <span className="inline-block text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground mr-1 align-middle">
+                      {c.taskType}
+                    </span>
+                    <span className="font-medium">{c.title}</span>
+                    <span className="block text-xs text-muted-foreground mt-0.5">{c.entityName}{c.notes ? ` — ${c.notes}` : ''}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Sticky footer */}
+        <div className="flex-shrink-0 flex justify-end gap-2 p-4 border-t border-border bg-background rounded-b-lg">
           <button onClick={onClose} className="text-sm px-3 py-1.5 rounded border border-border hover:bg-muted">Cancel</button>
           {candidates.length > 0 && (
             <button onClick={create} disabled={saving || picked.size === 0} className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground disabled:opacity-50">

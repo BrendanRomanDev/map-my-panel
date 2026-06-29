@@ -85,11 +85,13 @@ export function CompleteTaskModal({ task, propertyId, panelId, onClose, onDone }
 
   return (
     <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
-      <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full">
-        <h3 className="text-lg font-bold mb-1">Complete task</h3>
-        <p className="text-sm text-muted-foreground mb-4">{task.title} — {task.entity_name}</p>
+      <div className="bg-background border border-border rounded-lg max-w-md w-full max-h-[85vh] flex flex-col">
+        <div className="flex-shrink-0 p-6 pb-3 border-b border-border">
+          <h3 className="text-lg font-bold">Complete task</h3>
+          <p className="text-sm text-muted-foreground mt-1">{task.title} — {task.entity_name}</p>
+        </div>
 
-        <div className="space-y-3">
+        <div className="flex-1 overflow-auto p-6 py-4 space-y-3">
           {isSelfGround && (
             <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" checked={applyTagChanges} onChange={e => setApplyTagChanges(e.target.checked)} className="mt-0.5" />
@@ -124,7 +126,7 @@ export function CompleteTaskModal({ task, propertyId, panelId, onClose, onDone }
           </label>
         </div>
 
-        <div className="flex justify-end gap-2 mt-5">
+        <div className="flex-shrink-0 flex justify-end gap-2 p-4 border-t border-border rounded-b-lg">
           <button onClick={onClose} className="text-sm px-3 py-1.5 rounded border border-border hover:bg-muted">Cancel</button>
           <button onClick={apply} disabled={saving} className="text-sm px-3 py-1.5 rounded bg-primary text-primary-foreground disabled:opacity-50">
             {saving ? 'Completing…' : 'Complete'}

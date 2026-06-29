@@ -26,12 +26,13 @@ export function generateTaskCandidates(
   const out: TaskCandidate[] = []
 
   for (const e of entities) {
-    // Unmapped → Map Circuit
+    // Unmapped → Map Circuit. Title carries the specifics; the type is shown
+    // separately as a chip, so don't repeat "Map circuit" in the title.
     if (e.breaker_ids.length === 0 && !hasOpen(e.id, 'Map Circuit')) {
       out.push({
         entityId: e.id,
         entityName: e.name,
-        title: `Map circuit — find the breaker for "${e.name}"`,
+        title: `Find the breaker for "${e.name}"`,
         taskType: 'Map Circuit',
         notes: e.room ? `Room: ${e.room}` : null
       })
@@ -43,9 +44,9 @@ export function generateTaskCandidates(
       out.push({
         entityId: e.id,
         entityName: e.name,
-        title: `Self-ground "${e.name}"`,
+        title: `Install self-grounding box on "${e.name}"`,
         taskType: 'Self-Ground',
-        notes: twoProng ? 'Currently 2-prong/ungrounded — install a self-grounding box (note amperage).' : 'Ungrounded — install a self-grounding box or GFCI.'
+        notes: twoProng ? 'Currently 2-prong/ungrounded — note the amperage.' : 'Ungrounded — self-grounding box or GFCI.'
       })
     }
   }
