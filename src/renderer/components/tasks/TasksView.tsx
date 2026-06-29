@@ -220,6 +220,8 @@ function GenerateTasksModal({ panelId, entities, existingTasks, onClose, onCreat
   const toggle = (i: number) => {
     const next = new Set(picked); next.has(i) ? next.delete(i) : next.add(i); setPicked(next)
   }
+  const allSelected = candidates.length > 0 && picked.size === candidates.length
+  const toggleAll = () => setPicked(allSelected ? new Set() : new Set(candidates.map((_, i) => i)))
 
   const create = async () => {
     setSaving(true)
@@ -250,6 +252,12 @@ function GenerateTasksModal({ panelId, entities, existingTasks, onClose, onCreat
             <p className="text-sm text-muted-foreground">Nothing to suggest — no unmapped or ungrounded entities without tasks. 🎉</p>
           ) : (
             <div className="space-y-2">
+              <div className="flex items-center justify-between pb-1">
+                <span className="text-xs text-muted-foreground">{picked.size} of {candidates.length} selected</span>
+                <button onClick={toggleAll} className="text-xs text-primary hover:underline">
+                  {allSelected ? 'Deselect all' : 'Select all'}
+                </button>
+              </div>
               {candidates.map((c, i) => (
                 <label key={i} className="flex items-start gap-2 p-2 border border-border rounded text-sm cursor-pointer">
                   <input type="checkbox" checked={picked.has(i)} onChange={() => toggle(i)} className="mt-0.5" />
