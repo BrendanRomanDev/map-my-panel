@@ -272,7 +272,16 @@ export const DEFAULT_TASK_TYPES = [
   'Other'
 ] as const
 
-export interface Task {
+// Completion rules wired onto a task (or template). Tag ids are app-owned data,
+// so this stays unopinionated — the user/agent decides what the rules mean.
+export interface TaskRules {
+  on_create_tag_id: string | null
+  on_complete_remove_tag_ids: string[]
+  on_complete_add_tag_ids: string[]
+  on_complete_log_history: boolean
+}
+
+export interface Task extends TaskRules {
   id: string
   entity_id: string
   title: string
@@ -289,6 +298,32 @@ export interface CreateTaskInput {
   title: string
   notes?: string | null
   task_type?: string | null
+  on_create_tag_id?: string | null
+  on_complete_remove_tag_ids?: string[]
+  on_complete_add_tag_ids?: string[]
+  on_complete_log_history?: boolean
+}
+
+export interface TaskTemplate extends TaskRules {
+  id: string
+  property_id: string | null
+  name: string
+  task_type: string | null
+  title_template: string
+  notes: string | null
+  created_at: Date
+}
+
+export interface CreateTaskTemplateInput {
+  property_id: string | null
+  name: string
+  task_type?: string | null
+  title_template: string
+  notes?: string | null
+  on_create_tag_id?: string | null
+  on_complete_remove_tag_ids?: string[]
+  on_complete_add_tag_ids?: string[]
+  on_complete_log_history?: boolean
 }
 
 export interface UpdateTaskInput {

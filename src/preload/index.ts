@@ -31,7 +31,9 @@ import type {
   Task,
   TaskWithEntity,
   CreateTaskInput,
-  UpdateTaskInput
+  UpdateTaskInput,
+  TaskTemplate,
+  CreateTaskTemplateInput
 } from '../shared/types'
 
 export interface ElectronAPI {
@@ -122,11 +124,16 @@ export interface ElectronAPI {
     create: (input: CreateTaskInput) => Promise<Task>
     update: (id: string, input: UpdateTaskInput) => Promise<Task | null>
     complete: (id: string) => Promise<Task | null>
+    completeWithRules: (id: string, propertyId: string, opts?: { removeTagIds?: string[]; addTagIds?: string[]; logHistory?: boolean; historyNote?: string }) => Promise<Task | null>
     reopen: (id: string) => Promise<Task | null>
     delete: (id: string) => Promise<boolean>
     listForEntity: (entityId: string) => Promise<Task[]>
     listForPanel: (panelId: string) => Promise<TaskWithEntity[]>
     openCountForEntity: (entityId: string) => Promise<number>
+    listTemplates: (propertyId: string) => Promise<TaskTemplate[]>
+    createTemplate: (input: CreateTaskTemplateInput) => Promise<TaskTemplate>
+    deleteTemplate: (id: string) => Promise<boolean>
+    createFromTemplate: (templateId: string, entityIds: string[]) => Promise<string[]>
   }
 }
 
@@ -221,11 +228,16 @@ const electronAPI: ElectronAPI = {
     create: (input) => ipcRenderer.invoke('tasks:create', input),
     update: (id, input) => ipcRenderer.invoke('tasks:update', id, input),
     complete: (id) => ipcRenderer.invoke('tasks:complete', id),
+    completeWithRules: (id, propertyId, opts) => ipcRenderer.invoke('tasks:completeWithRules', id, propertyId, opts),
     reopen: (id) => ipcRenderer.invoke('tasks:reopen', id),
     delete: (id) => ipcRenderer.invoke('tasks:delete', id),
     listForEntity: (entityId) => ipcRenderer.invoke('tasks:listForEntity', entityId),
     listForPanel: (panelId) => ipcRenderer.invoke('tasks:listForPanel', panelId),
-    openCountForEntity: (entityId) => ipcRenderer.invoke('tasks:openCountForEntity', entityId)
+    openCountForEntity: (entityId) => ipcRenderer.invoke('tasks:openCountForEntity', entityId),
+    listTemplates: (propertyId) => ipcRenderer.invoke('tasks:listTemplates', propertyId),
+    createTemplate: (input) => ipcRenderer.invoke('tasks:createTemplate', input),
+    deleteTemplate: (id) => ipcRenderer.invoke('tasks:deleteTemplate', id),
+    createFromTemplate: (templateId, entityIds) => ipcRenderer.invoke('tasks:createFromTemplate', templateId, entityIds)
   }
 }
 

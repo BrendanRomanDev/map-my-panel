@@ -693,4 +693,38 @@ export function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('013_add_tasks')
     console.log('Migration 013_add_tasks completed')
   }
+
+  // Migration 014: Tag-wired tasks — completion rules on the task + templates.
+  if (!appliedMigrations.includes('014_task_rules_and_templates')) {
+    console.log('Running migration: 014_task_rules_and_templates')
+
+    database.exec(`
+      -- Completion rules stored on the task itself (JSON arrays of tag ids).
+      ALTER TABLE tasks ADD COLUMN on_create_tag_id TEXT;
+      ALTER TABLE tasks ADD COLUMN on_complete_remove_tag_ids TEXT DEFAULT '[]';
+      ALTER TABLE tasks ADD COLUMN on_complete_add_tag_ids TEXT DEFAULT '[]';
+      ALTER TABLE tasks ADD COLUMN on_complete_log_history INTEGER DEFAULT 0 CHECK (on_complete_log_history IN (0, 1));
+
+      -- Reusable task templates (the configured task minus the entity).
+      CREATE TABLE task_templates (
+        id                          TEXT PRIMARY KEY,
+        property_id                 TEXT,
+        name                        TEXT NOT NULL,
+        task_type                   TEXT,
+        title_template              TEXT NOT NULL,
+        notes                       TEXT,
+        on_create_tag_id            TEXT,
+        on_complete_remove_tag_ids  TEXT DEFAULT '[]',
+        on_complete_add_tag_ids     TEXT DEFAULT '[]',
+        on_complete_log_history     INTEGER DEFAULT 0 CHECK (on_complete_log_history IN (0, 1)),
+        created_at                  DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (property_id) REFERENCES properties(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX idx_task_templates_property ON task_templates(property_id);
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('014_task_rules_and_templates')
+    console.log('Migration 014_task_rules_and_templates completed')
+  }
 }
