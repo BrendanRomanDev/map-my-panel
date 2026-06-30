@@ -179,7 +179,7 @@ export function ByBreakerView({ panelId, typeFilter = 'all', roomFilter = 'all',
               </svg>
 
               <span className="flex h-2 w-2 rounded-full bg-yellow-500" />
-              <span>Unmapped ({unmappedEntities.length})</span>
+              <span>No breaker ({unmappedEntities.length})</span>
             </button>
 
             {!collapsedSections.has('unmapped') && (

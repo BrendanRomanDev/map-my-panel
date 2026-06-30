@@ -16,7 +16,7 @@ export interface TaskCandidate {
 //
 //   - entity has no breaker OR no room  → suggest a "Map Circuit" task
 //     (matches the two existing sidebar warnings: the no-breaker icon and the
-//      "Unassigned" room group).
+//      "No room" group).
 //
 // Skips entities that already have an OPEN Map Circuit task (no dupes).
 export function generateTaskCandidates(

@@ -51,7 +51,7 @@ export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all', se
     let groups = allEntitiesByRoom
       ?.filter(group => roomFilter === 'all' || group.room === roomFilter || (!group.room && roomFilter === 'all'))
       ?.map(group => ({
-        room: group.room || 'Unassigned', // Label entities without a room as "Unassigned"
+        room: group.room || 'No room', // Label entities without a room as "No room"
         entities: group.entities
           .filter(entity => typeFilter === 'all' || entity.entity_type === typeFilter)
           .map(entity => ({
@@ -159,7 +159,7 @@ export function ByRoomView({ panelId, typeFilter = 'all', roomFilter = 'all', se
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
 
-                {room === 'Unassigned' && <span className="flex h-2 w-2 rounded-full bg-yellow-500" />}
+                {room === 'No room' && <span className="flex h-2 w-2 rounded-full bg-yellow-500" />}
                 <span>{room} ({entities.length})</span>
               </button>
 

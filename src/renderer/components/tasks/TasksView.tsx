@@ -9,6 +9,7 @@ import { queryKeys } from '../../lib/queryKeys'
 import { CompleteTaskModal } from './CompleteTaskModal'
 import { TaskRulesEditor } from './TaskRulesEditor'
 import { generateTaskCandidates } from './generateTasks'
+import { buildTaskGroups, GROUP_BY, type GroupBy } from './taskGrouping'
 
 // Small inline icons (the app uses Feather/Lucide-style SVGs, no icon lib).
 function CheckIcon({ className }: { className?: string }) {
@@ -65,10 +66,79 @@ function pluralTargetType(type: TargetType): string {
   return type === TARGET_TYPES.ENTITY ? 'entities' : `${type}s`
 }
 
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`transition-transform ${open ? 'rotate-90' : ''}`}>
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  )
+}
+
+const GROUP_VIEWS = [
+  { key: GROUP_BY.FLAT, label: 'Flat' },
+  { key: GROUP_BY.ROOM, label: 'By Room' },
+  { key: GROUP_BY.BREAKER, label: 'By Breaker' }
+] as const
+
+// A single task row, shared by flat and grouped layouts.
+function TaskRow({ task, selectMode, selected, onToggleSelect, onComplete, onReopen, onDelete }: {
+  task: TaskWithTarget
+  selectMode: boolean
+  selected: boolean
+  onToggleSelect: () => void
+  onComplete: () => void
+  onReopen: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className={`flex items-start gap-3 p-3 border rounded ${selectMode && selected ? 'border-primary bg-primary/5' : 'border-border'}`}>
+      {selectMode && (
+        <input type="checkbox" checked={selected} onChange={onToggleSelect} className="mt-1" title="Select" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className={`text-sm font-medium ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+          {task.task_type && (
+            <span className="inline-block text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground mr-1.5 align-middle no-underline">
+              {task.task_type}
+            </span>
+          )}
+          {task.title}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          <span className="capitalize">{task.target_type}</span>: {task.target_label}{task.target_room ? ` · ${task.target_room}` : ''}
+          {task.target_amperage != null && (
+            <span className="ml-1.5 inline-block px-1 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-[10px] font-medium">
+              {task.target_amperage}A
+            </span>
+          )}
+        </div>
+        {task.notes && <div className="text-xs text-muted-foreground mt-1">{task.notes}</div>}
+      </div>
+      {!selectMode && (
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {task.status === 'done' ? (
+            <button onClick={onReopen} title="Reopen" className="p-1.5 rounded text-muted-foreground hover:bg-muted">
+              <UndoIcon />
+            </button>
+          ) : (
+            <button onClick={onComplete} title="Complete" className="p-1.5 rounded text-green-600 hover:bg-green-600/10">
+              <CheckIcon />
+            </button>
+          )}
+          <button onClick={onDelete} title="Delete" className="p-1.5 rounded text-destructive hover:bg-destructive/10">
+            <TrashIcon />
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function TasksView({ propertyId, panelId }: TasksViewProps) {
   const queryClient = useQueryClient()
   const { data: tasks } = useTasksForProperty(propertyId)
   const { data: entities } = useEntities(panelId)
+  const { data: breakers } = useBreakers(panelId)
 
   const [statusFilter, setStatusFilter] = useState<'open' | 'done' | 'all'>('open')
   const [targetFilter, setTargetFilter] = useState<TargetType | 'all'>('all')
@@ -78,6 +148,10 @@ export function TasksView({ propertyId, panelId }: TasksViewProps) {
   const [applyTemplate, setApplyTemplate] = useState<TaskTemplate | null>(null)
   const [selectMode, setSelectMode] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [groupBy, setGroupBy] = useState<GroupBy>(GROUP_BY.FLAT)
+  const [search, setSearch] = useState('')
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [expandedEntities, setExpandedEntities] = useState<Set<string>>(new Set())
 
   const exitSelectMode = () => {
     setSelectMode(false)
@@ -92,6 +166,38 @@ export function TasksView({ propertyId, panelId }: TasksViewProps) {
     .filter(t => (statusFilter === 'all' ? true : t.status === statusFilter))
     .filter(t => (targetFilter === 'all' ? true : t.target_type === targetFilter))
 
+  // Two-level grouping: Room|Breaker → Entity → tasks, with catch-all buckets
+  // (No room / No breaker / General Tasks). Search filters within. Collapsed by
+  // default (both levels).
+  const groups = buildTaskGroups({
+    tasks: shown,
+    entities: entities || [],
+    breakers: breakers || [],
+    groupBy,
+    search
+  })
+
+  // The actually-visible tasks (after status + target + SEARCH). All bulk
+  // actions operate on this set so "Select all shown" / Complete / Delete can
+  // never touch tasks hidden by the search.
+  const visibleTasks = groups.flatMap(g => g.subgroups.flatMap(s => s.tasks))
+  const visibleIds = visibleTasks.map(t => t.id)
+
+  const toggleGroup = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+  const toggleEntity = (key: string) => {
+    setExpandedEntities(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
   const reopen = async (id: string) => { await window.electronAPI.tasks.reopen(id); invalidate() }
   const del = async (id: string) => { await window.electronAPI.tasks.delete(id); invalidate() }
 
@@ -103,26 +209,31 @@ export function TasksView({ propertyId, panelId }: TasksViewProps) {
       return next
     })
   }
-  const shownIds = shown.map(t => t.id)
-  const allShownSelected = shownIds.length > 0 && shownIds.every(id => selectedIds.has(id))
+  // Bulk actions only ever touch VISIBLE tasks (selection ∩ what's on screen),
+  // so a search that hides rows also removes them from Complete/Delete.
+  const visibleIdSet = new Set(visibleIds)
+  const selectedVisible = visibleTasks.filter(t => selectedIds.has(t.id))
+  const selectedVisibleCount = selectedVisible.length
+  const allShownSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id))
   const toggleSelectAllShown = () => {
     setSelectedIds(prev => {
       if (allShownSelected) {
         const next = new Set(prev)
-        shownIds.forEach(id => next.delete(id))
+        visibleIds.forEach(id => next.delete(id))
         return next
       }
-      return new Set([...prev, ...shownIds])
+      return new Set([...prev, ...visibleIds])
     })
   }
   const deleteSelected = async () => {
-    await Promise.all([...selectedIds].map(id => window.electronAPI.tasks.delete(id)))
+    const ids = [...selectedIds].filter(id => visibleIdSet.has(id))
+    await Promise.all(ids.map(id => window.electronAPI.tasks.delete(id)))
     setSelectedIds(new Set())
     invalidate()
   }
   // Bulk complete applies each task's OWN stored rules silently (opening a
-  // confirm modal per task would be miserable). Only open tasks are completed.
-  const selectedOpen = (tasks || []).filter(t => selectedIds.has(t.id) && t.status === 'open')
+  // confirm modal per task would be miserable). Only open, visible tasks.
+  const selectedOpen = selectedVisible.filter(t => t.status === 'open')
   const completeSelected = async () => {
     await Promise.all(selectedOpen.map(t => window.electronAPI.tasks.completeWithRules(t.id, propertyId)))
     setSelectedIds(new Set())
@@ -136,12 +247,6 @@ export function TasksView({ propertyId, panelId }: TasksViewProps) {
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold">Tasks</h1>
         <div className="flex gap-2">
-          <button
-            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
-            className={`text-sm px-3 py-1.5 rounded border ${selectMode ? 'border-primary text-primary' : 'border-border hover:bg-muted'}`}
-          >
-            {selectMode ? 'Done' : 'Select multiple'}
-          </button>
           <button
             onClick={() => setShowGenerate(true)}
             className="text-sm px-3 py-1.5 rounded border border-border hover:bg-muted"
@@ -157,51 +262,78 @@ export function TasksView({ propertyId, panelId }: TasksViewProps) {
         </div>
       </div>
 
-      {/* Status filter */}
-      <div className="flex gap-1 mb-2">
-        {(['open', 'done', 'all'] as const).map(f => (
-          <button
-            key={f}
-            onClick={() => setStatusFilter(f)}
-            className={`text-xs px-3 py-1 rounded ${statusFilter === f ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70'}`}
+      {/* Toolbar: view mode (left) vs. filters (right) — distinct roles. */}
+      <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        {/* Primary: view-mode segmented control */}
+        <div className="inline-flex rounded-md border border-border overflow-hidden">
+          {GROUP_VIEWS.map(g => (
+            <button
+              key={g.key}
+              onClick={() => setGroupBy(g.key)}
+              className={`text-xs px-3 py-1.5 ${groupBy === g.key ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
+            >
+              {g.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Secondary: filters (match the entity sidebar's dropdown style) */}
+        <div className="flex items-center gap-2">
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as 'open' | 'done' | 'all')}
+            className="px-2 py-1.5 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-xs"
           >
-            {f === 'open' ? 'Open' : f === 'done' ? 'Done' : 'All'}
+            <option value="open">Status: Open</option>
+            <option value="done">Status: Done</option>
+            <option value="all">Status: All</option>
+          </select>
+          <select
+            value={targetFilter}
+            onChange={e => setTargetFilter(e.target.value as TargetType | 'all')}
+            className="px-2 py-1.5 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-xs"
+          >
+            {TARGET_FILTERS.map(f => (
+              <option key={f.key} value={f.key}>Target: {f.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+            className={`text-xs px-3 py-1.5 rounded border ${selectMode ? 'border-primary text-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}
+          >
+            {selectMode ? 'Done' : 'Select multiple'}
           </button>
-        ))}
+        </div>
       </div>
 
-      {/* Target-type filter */}
-      <div className="flex gap-1 mb-4">
-        {TARGET_FILTERS.map(f => (
-          <button
-            key={f.key}
-            onClick={() => setTargetFilter(f.key as TargetType | 'all')}
-            className={`text-xs px-3 py-1 rounded border ${targetFilter === f.key ? 'border-primary text-primary' : 'border-border text-muted-foreground hover:bg-muted'}`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
+      {/* Search */}
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search tasks by title, type, entity, or room…"
+        className="w-full mb-3 text-sm px-3 py-1.5 rounded border border-border bg-background"
+      />
 
       <TemplateStrip propertyId={propertyId} onApply={setApplyTemplate} />
 
-      {/* Bulk-action bar: only in select mode. Select tasks, then complete or delete. */}
-      {selectMode && shown.length > 0 && (
+      {/* Bulk-action bar: only in select mode. Counts reflect VISIBLE selection
+          so a search that hides rows also shrinks what Complete/Delete touch. */}
+      {selectMode && visibleTasks.length > 0 && (
         <div className="flex items-center gap-3 mb-2 text-xs">
           <label className="flex items-center gap-1.5 text-muted-foreground cursor-pointer">
             <input type="checkbox" checked={allShownSelected} onChange={toggleSelectAllShown} />
             Select all shown
           </label>
-          {selectedIds.size > 0 && (
+          {selectedVisibleCount > 0 && (
             <>
-              <span className="text-muted-foreground">{selectedIds.size} selected</span>
+              <span className="text-muted-foreground">{selectedVisibleCount} selected</span>
               {selectedOpen.length > 0 && (
                 <button onClick={completeSelected} className="px-2 py-1 rounded bg-green-600 text-white hover:opacity-90">
                   Complete {selectedOpen.length}
                 </button>
               )}
               <button onClick={deleteSelected} className="px-2 py-1 rounded bg-destructive text-destructive-foreground hover:opacity-90">
-                Delete {selectedIds.size}
+                Delete {selectedVisibleCount}
               </button>
               <button onClick={() => setSelectedIds(new Set())} className="text-muted-foreground hover:underline">
                 Clear
@@ -211,64 +343,92 @@ export function TasksView({ propertyId, panelId }: TasksViewProps) {
         </div>
       )}
 
-      {shown.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          {statusFilter === 'open' ? 'No open tasks. 🎉' : 'No tasks.'}
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {shown.map(t => (
-            <div key={t.id} className={`flex items-start gap-3 p-3 border rounded ${selectMode && selectedIds.has(t.id) ? 'border-primary bg-primary/5' : 'border-border'}`}>
-              {/* Select mode: a single selection checkbox drives bulk actions. */}
-              {selectMode && (
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(t.id)}
-                  onChange={() => toggleSelect(t.id)}
-                  className="mt-1"
-                  title="Select"
-                />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className={`text-sm font-medium ${t.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
-                  {t.task_type && (
-                    <span className="inline-block text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-muted text-muted-foreground mr-1.5 align-middle no-underline">
-                      {t.task_type}
+      {(() => {
+        const renderTask = (t: TaskWithTarget) => (
+          <TaskRow
+            key={t.id}
+            task={t}
+            selectMode={selectMode}
+            selected={selectedIds.has(t.id)}
+            onToggleSelect={() => toggleSelect(t.id)}
+            onComplete={() => setCompleting(t)}
+            onReopen={() => reopen(t.id)}
+            onDelete={() => del(t.id)}
+          />
+        )
+
+        if (groups.length === 0) {
+          return (
+            <p className="text-sm text-muted-foreground">
+              {search.trim()
+                ? `No tasks match "${search.trim()}".`
+                : statusFilter === 'open' ? 'No open tasks. 🎉' : 'No tasks.'}
+            </p>
+          )
+        }
+
+        // Flat: just the rows, no group/entity headers.
+        if (groupBy === GROUP_BY.FLAT) {
+          return <div className="space-y-2">{visibleTasks.map(renderTask)}</div>
+        }
+
+        // Force every group/entity open when searching (so matches are visible)
+        // or in select mode (so you can actually check everything).
+        const forceExpand = !!search.trim() || selectMode
+
+        return (
+          <div className="space-y-2">
+            {groups.map(g => {
+              const groupOpen = forceExpand || expandedGroups.has(g.key)
+              return (
+                <div key={g.key} className="border border-border rounded">
+                  <button
+                    onClick={() => toggleGroup(g.key)}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 rounded"
+                  >
+                    <ChevronIcon open={groupOpen} />
+                    <span className={`font-medium text-sm flex-1 truncate ${g.isCatchAll ? 'text-muted-foreground' : ''}`}>{g.label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {g.openCount > 0 ? `${g.openCount} open` : 'done'}
+                      {g.taskCount !== g.openCount ? ` · ${g.taskCount} total` : ''}
                     </span>
-                  )}
-                  {t.title}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  <span className="capitalize">{t.target_type}</span>: {t.target_label}{t.target_room ? ` · ${t.target_room}` : ''}
-                  {t.target_amperage != null && (
-                    <span className="ml-1.5 inline-block px-1 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-[10px] font-medium">
-                      {t.target_amperage}A
-                    </span>
-                  )}
-                </div>
-                {t.notes && <div className="text-xs text-muted-foreground mt-1">{t.notes}</div>}
-              </div>
-              {/* Per-row icon actions — hidden in select mode (bulk bar drives it). */}
-              {!selectMode && (
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {t.status === 'done' ? (
-                    <button onClick={() => reopen(t.id)} title="Reopen" className="p-1.5 rounded text-muted-foreground hover:bg-muted">
-                      <UndoIcon />
-                    </button>
-                  ) : (
-                    <button onClick={() => setCompleting(t)} title="Complete" className="p-1.5 rounded text-green-600 hover:bg-green-600/10">
-                      <CheckIcon />
-                    </button>
-                  )}
-                  <button onClick={() => del(t.id)} title="Delete" className="p-1.5 rounded text-destructive hover:bg-destructive/10">
-                    <TrashIcon />
                   </button>
+
+                  {groupOpen && (
+                    <div className="space-y-1.5 p-2 pt-0">
+                      {g.subgroups.map(sub => {
+                        // Loose tasks (non-entity) render directly, no entity sub-header.
+                        if (sub.entityId === null) {
+                          return <div key={`${g.key}:loose`} className="space-y-2">{sub.tasks.map(renderTask)}</div>
+                        }
+                        const subKey = `${g.key}:${sub.entityId}`
+                        const subOpen = forceExpand || expandedEntities.has(subKey)
+                        const subOpenCount = sub.tasks.filter(t => t.status === 'open').length
+                        return (
+                          <div key={subKey} className="border border-border/60 rounded bg-muted/20">
+                            <button
+                              onClick={() => toggleEntity(subKey)}
+                              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-muted/40 rounded"
+                            >
+                              <ChevronIcon open={subOpen} />
+                              <span className="text-sm flex-1 truncate">{sub.label}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {subOpenCount > 0 ? `${subOpenCount} open` : 'done'}
+                                {sub.tasks.length !== subOpenCount ? ` · ${sub.tasks.length}` : ''}
+                              </span>
+                            </button>
+                            {subOpen && <div className="space-y-2 p-2 pt-0">{sub.tasks.map(renderTask)}</div>}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+              )
+            })}
+          </div>
+        )
+      })()}
 
       {showAdd && (
         <AddTaskModal
