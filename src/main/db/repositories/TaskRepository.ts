@@ -2,18 +2,22 @@ import { randomUUID } from 'crypto'
 import Database from 'better-sqlite3'
 import type {
   Task,
-  TaskWithEntity,
+  TaskWithTarget,
   CreateTaskInput,
   UpdateTaskInput,
   TaskTemplate,
-  CreateTaskTemplateInput
+  CreateTaskTemplateInput,
+  TargetType
 } from '../../../shared/types'
 import { TagRepository } from './TagRepository'
 import { HistoryRepository } from './HistoryRepository'
+import { deriveEntityAmperage, breakerAmperageMap } from '../../../shared/entityAmperage'
 
-// Entity-linked to-dos with optional tag-wiring rules. Tasks cascade-delete with
-// their entity (FK). Completion rules + templates make the app's machinery
-// configurable without baking in any electrical opinions.
+// Polymorphic to-dos: a task targets any (target_type, target_id) — panel,
+// breaker, entity, or the property itself — mirroring tags/history. No FK on
+// target_id; cleanup rides the polymorphic delete triggers. Completion rules +
+// templates make the machinery configurable without baking in any electrical
+// opinions; tag side-effects attach to the task's OWN target.
 export class TaskRepository {
   protected db: Database.Database
 
@@ -29,14 +33,15 @@ export class TaskRepository {
     this.db
       .prepare(
         `INSERT INTO tasks
-           (id, entity_id, title, notes, task_type, status,
+           (id, target_type, target_id, title, notes, task_type, status,
             on_create_tag_id, on_complete_remove_tag_ids, on_complete_add_tag_ids, on_complete_log_history,
             created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
-        input.entity_id,
+        input.target_type,
+        input.target_id,
         input.title,
         input.notes || null,
         input.task_type || null,
@@ -48,9 +53,9 @@ export class TaskRepository {
         now
       )
 
-    // On-create: apply the wired tag to the entity (idempotent).
+    // On-create: apply the wired tag to the task's target (idempotent).
     if (input.on_create_tag_id) {
-      new TagRepository(this.db).attach(input.on_create_tag_id, 'entity', input.entity_id)
+      new TagRepository(this.db).attach(input.on_create_tag_id, input.target_type, input.target_id)
     }
 
     return this.findById(id)!
@@ -84,9 +89,11 @@ export class TaskRepository {
     return this.findById(id)
   }
 
-  // Complete + apply the wired rules in one transaction. The caller may override
-  // which side-effects run (so the confirm UI's checkboxes win); defaults to the
-  // task's stored rules. propertyId is needed for any history event.
+  // Complete + apply the wired rules in one transaction. Tag changes + the
+  // optional history event land on the task's OWN target (entity/breaker/panel/
+  // property). The caller may override which side-effects run (so the confirm
+  // UI's checkboxes win); defaults to the task's stored rules. propertyId is
+  // needed for any history event.
   completeWithRules(
     id: string,
     propertyId: string,
@@ -106,14 +113,14 @@ export class TaskRepository {
 
     const tagRepo = new TagRepository(this.db)
     const run = this.db.transaction(() => {
-      for (const tagId of removeTagIds) tagRepo.detach(tagId, 'entity', task.entity_id)
-      for (const tagId of addTagIds) tagRepo.attach(tagId, 'entity', task.entity_id)
+      for (const tagId of removeTagIds) tagRepo.detach(tagId, task.target_type, task.target_id)
+      for (const tagId of addTagIds) tagRepo.attach(tagId, task.target_type, task.target_id)
       if (logHistory) {
         new HistoryRepository(this.db).createEvent({
           property_id: propertyId,
           occurred_on: new Date().toISOString().slice(0, 10),
           notes: opts?.historyNote || task.title,
-          targets: [{ target_type: 'entity', target_id: task.entity_id }]
+          targets: [{ target_type: task.target_type, target_id: task.target_id }]
         })
       }
       this.complete(id)
@@ -134,29 +141,75 @@ export class TaskRepository {
     return this.db.prepare('DELETE FROM tasks WHERE id = ?').run(id).changes > 0
   }
 
-  listForEntity(entityId: string): Task[] {
+  listForTarget(targetType: TargetType, targetId: string): Task[] {
     const rows = this.db
-      .prepare('SELECT * FROM tasks WHERE entity_id = ? ORDER BY status ASC, created_at DESC')
-      .all(entityId) as any[]
+      .prepare('SELECT * FROM tasks WHERE target_type = ? AND target_id = ? ORDER BY status ASC, created_at DESC')
+      .all(targetType, targetId) as any[]
     return rows.map(r => this.mapRow(r))
   }
 
-  listForPanel(panelId: string): TaskWithEntity[] {
+  // All tasks across a property: property-level tasks + every panel on the
+  // property + their breakers + their entities. Each row carries a resolved
+  // target_label (and target_room for entities) so the view needs no extra
+  // lookups. This is the property-wide Tasks view.
+  listForProperty(propertyId: string): TaskWithTarget[] {
     const rows = this.db
       .prepare(
-        `SELECT t.*, e.name AS entity_name, e.room AS entity_room
-         FROM tasks t INNER JOIN entities e ON e.id = t.entity_id
-         WHERE e.panel_id = ?
-         ORDER BY t.status ASC, e.room ASC, t.created_at DESC`
+        `SELECT t.*,
+           CASE t.target_type
+             WHEN 'property' THEN pr.name
+             WHEN 'panel'    THEN pa.name
+             WHEN 'breaker'  THEN COALESCE(b.label, 'Breaker ' || b.position || COALESCE(b.position_slot, ''))
+             WHEN 'entity'   THEN e.name
+           END AS target_label,
+           CASE WHEN t.target_type = 'entity' THEN e.room ELSE NULL END AS target_room,
+           CASE WHEN t.target_type = 'entity' THEN e.breaker_ids ELSE NULL END AS entity_breaker_ids,
+           CASE WHEN t.target_type = 'breaker' THEN b.amperage ELSE NULL END AS breaker_amperage
+         FROM tasks t
+         LEFT JOIN properties pr ON t.target_type = 'property' AND pr.id = t.target_id
+         LEFT JOIN panels     pa ON t.target_type = 'panel'    AND pa.id = t.target_id
+         LEFT JOIN breakers   b  ON t.target_type = 'breaker'  AND b.id  = t.target_id
+         LEFT JOIN entities   e  ON t.target_type = 'entity'   AND e.id  = t.target_id
+         WHERE
+           (t.target_type = 'property' AND t.target_id = @propertyId)
+           OR (t.target_type = 'panel'   AND pa.property_id = @propertyId)
+           OR (t.target_type = 'breaker' AND b.panel_id IN (SELECT id FROM panels WHERE property_id = @propertyId))
+           OR (t.target_type = 'entity'  AND e.panel_id  IN (SELECT id FROM panels WHERE property_id = @propertyId))
+         ORDER BY t.status ASC, t.created_at DESC`
       )
-      .all(panelId) as any[]
-    return rows.map(r => ({ ...this.mapRow(r), entity_name: r.entity_name, entity_room: r.entity_room }))
+      .all({ propertyId }) as any[]
+
+    // Amperage map for entity-targeted tasks: an entity's amperage is derived
+    // from its breaker(s), never stored. Look up all breakers on the property
+    // once, then derive per entity-target.
+    const breakerRows = this.db
+      .prepare(
+        `SELECT id, amperage FROM breakers
+         WHERE panel_id IN (SELECT id FROM panels WHERE property_id = ?)`
+      )
+      .all(propertyId) as { id: string; amperage: number | null }[]
+    const breakersById = breakerAmperageMap(breakerRows)
+
+    return rows.map(r => {
+      let amperage: number | null = null
+      if (r.target_type === 'breaker') {
+        amperage = r.breaker_amperage ?? null
+      } else if (r.target_type === 'entity') {
+        amperage = deriveEntityAmperage(this.parseIds(r.entity_breaker_ids), breakersById)
+      }
+      return {
+        ...this.mapRow(r),
+        target_label: r.target_label || '(deleted)',
+        target_room: r.target_room ?? null,
+        target_amperage: amperage
+      }
+    })
   }
 
-  openCountForEntity(entityId: string): number {
+  openCountForTarget(targetType: TargetType, targetId: string): number {
     const row = this.db
-      .prepare("SELECT COUNT(*) AS c FROM tasks WHERE entity_id = ? AND status = 'open'")
-      .get(entityId) as { c: number }
+      .prepare("SELECT COUNT(*) AS c FROM tasks WHERE target_type = ? AND target_id = ? AND status = 'open'")
+      .get(targetType, targetId) as { c: number }
     return row.c
   }
 
@@ -202,19 +255,22 @@ export class TaskRepository {
     return this.db.prepare('DELETE FROM task_templates WHERE id = ?').run(id).changes > 0
   }
 
-  // Bulk: create one task per entity from a template. {entityName} in the
-  // title_template is substituted per entity. Returns created task ids.
-  createFromTemplate(templateId: string, entityIds: string[]): string[] {
+  // Bulk: create one task per target from a template. {entityName} in the
+  // title_template is substituted with each target's resolved label. Returns
+  // created task ids. Targets are (target_type, target_id) pairs so a template
+  // can fan out across entities, breakers, etc.
+  createFromTemplate(templateId: string, targets: { target_type: TargetType; target_id: string }[]): string[] {
     const tplRow = this.db.prepare('SELECT * FROM task_templates WHERE id = ?').get(templateId)
     if (!tplRow) return []
     const tpl = this.mapTemplate(tplRow)
     const ids: string[] = []
     const run = this.db.transaction(() => {
-      for (const entityId of entityIds) {
-        const ent = this.db.prepare('SELECT name FROM entities WHERE id = ?').get(entityId) as { name: string } | undefined
-        const title = tpl.title_template.replace(/\{entityName\}/g, ent?.name || 'entity')
+      for (const target of targets) {
+        const label = this.labelForTarget(target.target_type, target.target_id)
+        const title = tpl.title_template.replace(/\{entityName\}/g, label)
         const t = this.create({
-          entity_id: entityId,
+          target_type: target.target_type,
+          target_id: target.target_id,
           title,
           notes: tpl.notes,
           task_type: tpl.task_type,
@@ -230,7 +286,27 @@ export class TaskRepository {
     return ids
   }
 
-  // ---- Mappers ------------------------------------------------------------
+  // ---- Helpers ------------------------------------------------------------
+
+  private labelForTarget(targetType: TargetType, targetId: string): string {
+    if (targetType === 'entity') {
+      const r = this.db.prepare('SELECT name FROM entities WHERE id = ?').get(targetId) as { name: string } | undefined
+      return r?.name || 'entity'
+    }
+    if (targetType === 'panel') {
+      const r = this.db.prepare('SELECT name FROM panels WHERE id = ?').get(targetId) as { name: string } | undefined
+      return r?.name || 'panel'
+    }
+    if (targetType === 'breaker') {
+      const r = this.db.prepare('SELECT label, position, position_slot FROM breakers WHERE id = ?').get(targetId) as
+        | { label: string | null; position: number; position_slot: string | null }
+        | undefined
+      if (!r) return 'breaker'
+      return r.label || `Breaker ${r.position}${r.position_slot || ''}`
+    }
+    const r = this.db.prepare('SELECT name FROM properties WHERE id = ?').get(targetId) as { name: string } | undefined
+    return r?.name || 'property'
+  }
 
   private parseIds(v: any): string[] {
     try { return JSON.parse(v || '[]') } catch { return [] }
@@ -239,7 +315,8 @@ export class TaskRepository {
   private mapRow(row: any): Task {
     return {
       id: row.id,
-      entity_id: row.entity_id,
+      target_type: row.target_type,
+      target_id: row.target_id,
       title: row.title,
       notes: row.notes,
       task_type: row.task_type,

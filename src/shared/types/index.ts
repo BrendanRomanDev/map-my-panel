@@ -283,7 +283,8 @@ export interface TaskRules {
 
 export interface Task extends TaskRules {
   id: string
-  entity_id: string
+  target_type: TargetType
+  target_id: string
   title: string
   notes: string | null
   task_type: string | null
@@ -294,7 +295,8 @@ export interface Task extends TaskRules {
 }
 
 export interface CreateTaskInput {
-  entity_id: string
+  target_type: TargetType
+  target_id: string
   title: string
   notes?: string | null
   task_type?: string | null
@@ -332,8 +334,14 @@ export interface UpdateTaskInput {
   task_type?: string | null
 }
 
-// Task plus its entity's name/room (for the list view without extra lookups).
-export interface TaskWithEntity extends Task {
-  entity_name: string
-  entity_room: string | null
+// Task plus a resolved label for its target (for the list view without extra
+// lookups). `target_label` is the target's display name (entity/breaker/panel
+// name, or the property name); `target_room` is the entity's room when the
+// target is an entity, else null. `target_amperage` is the circuit amperage:
+// for entity targets it's derived from the entity's breaker(s); for breaker
+// targets it's the breaker's own amperage; null otherwise (or when unmapped).
+export interface TaskWithTarget extends Task {
+  target_label: string
+  target_room: string | null
+  target_amperage: number | null
 }

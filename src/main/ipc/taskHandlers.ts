@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { getDatabase } from '../db/database'
 import { TaskRepository } from '../db/repositories'
-import type { Task, TaskWithEntity, CreateTaskInput, UpdateTaskInput, TaskTemplate, CreateTaskTemplateInput } from '../../shared/types'
+import type { Task, TaskWithTarget, CreateTaskInput, UpdateTaskInput, TaskTemplate, CreateTaskTemplateInput, TargetType } from '../../shared/types'
 
 export function registerTaskHandlers(): void {
   const db = getDatabase()
@@ -31,16 +31,16 @@ export function registerTaskHandlers(): void {
     return repo.delete(id)
   })
 
-  ipcMain.handle('tasks:listForEntity', async (_, entityId: string): Promise<Task[]> => {
-    return repo.listForEntity(entityId)
+  ipcMain.handle('tasks:listForTarget', async (_, targetType: TargetType, targetId: string): Promise<Task[]> => {
+    return repo.listForTarget(targetType, targetId)
   })
 
-  ipcMain.handle('tasks:listForPanel', async (_, panelId: string): Promise<TaskWithEntity[]> => {
-    return repo.listForPanel(panelId)
+  ipcMain.handle('tasks:listForProperty', async (_, propertyId: string): Promise<TaskWithTarget[]> => {
+    return repo.listForProperty(propertyId)
   })
 
-  ipcMain.handle('tasks:openCountForEntity', async (_, entityId: string): Promise<number> => {
-    return repo.openCountForEntity(entityId)
+  ipcMain.handle('tasks:openCountForTarget', async (_, targetType: TargetType, targetId: string): Promise<number> => {
+    return repo.openCountForTarget(targetType, targetId)
   })
 
   // Templates
@@ -56,7 +56,7 @@ export function registerTaskHandlers(): void {
     return repo.deleteTemplate(id)
   })
 
-  ipcMain.handle('tasks:createFromTemplate', async (_, templateId: string, entityIds: string[]): Promise<string[]> => {
-    return repo.createFromTemplate(templateId, entityIds)
+  ipcMain.handle('tasks:createFromTemplate', async (_, templateId: string, targets: { target_type: TargetType; target_id: string }[]): Promise<string[]> => {
+    return repo.createFromTemplate(templateId, targets)
   })
 }

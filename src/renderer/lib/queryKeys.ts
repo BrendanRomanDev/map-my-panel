@@ -49,9 +49,9 @@ export const queryKeys = {
   // Task keys
   tasks: {
     all: ['tasks'] as const,
-    byEntity: (entityId: string) => ['tasks', 'byEntity', entityId] as const,
-    byPanel: (panelId: string) => ['tasks', 'byPanel', panelId] as const,
-    openCount: (entityId: string) => ['tasks', 'openCount', entityId] as const,
+    byTarget: (targetType: string, targetId: string) => ['tasks', 'byTarget', targetType, targetId] as const,
+    byProperty: (propertyId: string) => ['tasks', 'byProperty', propertyId] as const,
+    openCount: (targetType: string, targetId: string) => ['tasks', 'openCount', targetType, targetId] as const,
     templates: (propertyId: string) => ['tasks', 'templates', propertyId] as const,
   },
 } as const

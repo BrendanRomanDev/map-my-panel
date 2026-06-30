@@ -6,6 +6,7 @@ import { RoomSelector } from '../shared/RoomSelector'
 import { TypeSelector } from '../shared/TypeSelector'
 import { TagPicker } from '../tags/TagPicker'
 import { useTagSelection } from '../../hooks/useTags'
+import { deriveEntityAmperage, breakerAmperageMap } from '@shared/entityAmperage'
 import type { Entity } from '@shared/types'
 
 interface EntityEditModalProps {
@@ -330,8 +331,16 @@ export function EntityEditModal({ entity, isOpen, onClose }: EntityEditModalProp
                 </div>
               )}
               {breakerIds.length > 0 && (
-                <div className="text-xs text-muted-foreground mt-2">
-                  {breakerIds.length} breaker{breakerIds.length === 1 ? '' : 's'} selected
+                <div className="text-xs text-muted-foreground mt-2 flex items-center gap-2">
+                  <span>{breakerIds.length} breaker{breakerIds.length === 1 ? '' : 's'} selected</span>
+                  {(() => {
+                    const amperage = deriveEntityAmperage(breakerIds, breakerAmperageMap(allBreakers || []))
+                    return amperage != null ? (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                        {amperage}A
+                      </span>
+                    ) : null
+                  })()}
                 </div>
               )}
             </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Entity } from '@shared/types'
 import { TagBadgeList } from '../tags/TagBadgeList'
 import { EntityHistoryModal } from '../history/EntityHistoryModal'
+import { useEntityAmperage } from '../../hooks/useBreakers'
 
 interface EntityCardProps {
   entity: Entity
@@ -13,6 +14,7 @@ interface EntityCardProps {
 
 export function EntityCard({ entity, onClick, onEdit, onHover, isSelected }: EntityCardProps) {
   const [showHistory, setShowHistory] = useState(false)
+  const amperage = useEntityAmperage(entity)
 
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -55,6 +57,11 @@ export function EntityCard({ entity, onClick, onEdit, onHover, isSelected }: Ent
             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-secondary text-secondary-foreground">
               {entity.entity_type}
             </span>
+            {amperage != null && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                {amperage}A
+              </span>
+            )}
             {entity.room && (
               <span className="ml-2 text-xs">📍 {entity.room}</span>
             )}

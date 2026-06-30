@@ -1,30 +1,32 @@
 import { useQuery } from '@tanstack/react-query'
+import type { TargetType } from '@shared/types'
 import { queryKeys } from '../lib/queryKeys'
 
-// All tasks for entities on a panel (with entity name/room), for the Tasks view.
-export function useTasksForPanel(panelId: string | null) {
+// All tasks across a property (property + panels + breakers + entities), with a
+// resolved target label/room. Powers the property-wide Tasks view.
+export function useTasksForProperty(propertyId: string | null) {
   return useQuery({
-    queryKey: queryKeys.tasks.byPanel(panelId || ''),
-    queryFn: () => window.electronAPI.tasks.listForPanel(panelId!),
-    enabled: !!panelId
+    queryKey: queryKeys.tasks.byProperty(propertyId || ''),
+    queryFn: () => window.electronAPI.tasks.listForProperty(propertyId!),
+    enabled: !!propertyId
   })
 }
 
-// Tasks for a single entity.
-export function useTasksForEntity(entityId: string | null) {
+// Tasks for a single target (panel/breaker/entity/property).
+export function useTasksForTarget(targetType: TargetType, targetId: string | null) {
   return useQuery({
-    queryKey: queryKeys.tasks.byEntity(entityId || ''),
-    queryFn: () => window.electronAPI.tasks.listForEntity(entityId!),
-    enabled: !!entityId
+    queryKey: queryKeys.tasks.byTarget(targetType, targetId || ''),
+    queryFn: () => window.electronAPI.tasks.listForTarget(targetType, targetId!),
+    enabled: !!targetId
   })
 }
 
-// Open-task count for an entity (for the card badge).
-export function useOpenTaskCount(entityId: string | null) {
+// Open-task count for a target (for the card badge).
+export function useOpenTaskCount(targetType: TargetType, targetId: string | null) {
   return useQuery({
-    queryKey: queryKeys.tasks.openCount(entityId || ''),
-    queryFn: () => window.electronAPI.tasks.openCountForEntity(entityId!),
-    enabled: !!entityId
+    queryKey: queryKeys.tasks.openCount(targetType, targetId || ''),
+    queryFn: () => window.electronAPI.tasks.openCountForTarget(targetType, targetId!),
+    enabled: !!targetId
   })
 }
 

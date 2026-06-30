@@ -1,4 +1,4 @@
-import type { Entity, TaskWithEntity } from '@shared/types'
+import type { Entity, TaskWithTarget } from '@shared/types'
 
 export interface TaskCandidate {
   entityId: string
@@ -21,10 +21,12 @@ export interface TaskCandidate {
 // Skips entities that already have an OPEN Map Circuit task (no dupes).
 export function generateTaskCandidates(
   entities: Entity[],
-  existingTasks: TaskWithEntity[]
+  existingTasks: TaskWithTarget[]
 ): TaskCandidate[] {
   const openMapByEntity = new Set(
-    existingTasks.filter(t => t.status === 'open' && t.task_type === 'Map Circuit').map(t => t.entity_id)
+    existingTasks
+      .filter(t => t.status === 'open' && t.task_type === 'Map Circuit' && t.target_type === 'entity')
+      .map(t => t.target_id)
   )
 
   const out: TaskCandidate[] = []

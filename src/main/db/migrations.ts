@@ -727,4 +727,87 @@ export function runMigrations(database: Database.Database): void {
     database.prepare('INSERT INTO migrations (name) VALUES (?)').run('014_task_rules_and_templates')
     console.log('Migration 014_task_rules_and_templates completed')
   }
+
+  // Migration 015: Polymorphic tasks. Tasks were entity-only (entity_id NOT NULL
+  // FK); make them target any of panel/breaker/entity/property like tags/history.
+  // SQLite can't drop a FK in place, so rebuild the table, backfilling existing
+  // rows as target_type='entity'. Cleanup moves from the FK cascade to the
+  // existing polymorphic delete triggers (extended below to prune tasks too).
+  if (!appliedMigrations.includes('015_polymorphic_tasks')) {
+    console.log('Running migration: 015_polymorphic_tasks')
+
+    database.exec(`
+      -- 1) Rebuild tasks with a polymorphic (target_type, target_id) target.
+      CREATE TABLE tasks_new (
+        id                          TEXT PRIMARY KEY,
+        target_type                 TEXT NOT NULL DEFAULT 'entity' CHECK (target_type IN ('panel', 'breaker', 'entity', 'property')),
+        target_id                   TEXT NOT NULL,
+        title                       TEXT NOT NULL,
+        notes                       TEXT,
+        task_type                   TEXT,
+        status                      TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'done')),
+        on_create_tag_id            TEXT,
+        on_complete_remove_tag_ids  TEXT DEFAULT '[]',
+        on_complete_add_tag_ids     TEXT DEFAULT '[]',
+        on_complete_log_history     INTEGER DEFAULT 0 CHECK (on_complete_log_history IN (0, 1)),
+        created_at                  DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at                  DATETIME DEFAULT CURRENT_TIMESTAMP,
+        completed_at                DATETIME
+      );
+
+      INSERT INTO tasks_new
+        (id, target_type, target_id, title, notes, task_type, status,
+         on_create_tag_id, on_complete_remove_tag_ids, on_complete_add_tag_ids, on_complete_log_history,
+         created_at, updated_at, completed_at)
+      SELECT
+         id, 'entity', entity_id, title, notes, task_type, status,
+         on_create_tag_id, on_complete_remove_tag_ids, on_complete_add_tag_ids, on_complete_log_history,
+         created_at, updated_at, completed_at
+      FROM tasks;
+
+      DROP TABLE tasks;
+      ALTER TABLE tasks_new RENAME TO tasks;
+
+      CREATE INDEX idx_tasks_target ON tasks(target_type, target_id);
+      CREATE INDEX idx_tasks_status ON tasks(status);
+
+      -- 2) Extend the polymorphic delete triggers to prune tasks alongside
+      -- tag_links/event_links (drop + recreate; triggers can't be altered).
+      DROP TRIGGER IF EXISTS trg_panel_delete_links;
+      DROP TRIGGER IF EXISTS trg_breaker_delete_links;
+      DROP TRIGGER IF EXISTS trg_entity_delete_links;
+      DROP TRIGGER IF EXISTS trg_property_delete_links;
+
+      CREATE TRIGGER trg_panel_delete_links AFTER DELETE ON panels
+      BEGIN
+        DELETE FROM tag_links   WHERE target_type = 'panel' AND target_id = OLD.id;
+        DELETE FROM event_links WHERE target_type = 'panel' AND target_id = OLD.id;
+        DELETE FROM tasks       WHERE target_type = 'panel' AND target_id = OLD.id;
+      END;
+
+      CREATE TRIGGER trg_breaker_delete_links AFTER DELETE ON breakers
+      BEGIN
+        DELETE FROM tag_links   WHERE target_type = 'breaker' AND target_id = OLD.id;
+        DELETE FROM event_links WHERE target_type = 'breaker' AND target_id = OLD.id;
+        DELETE FROM tasks       WHERE target_type = 'breaker' AND target_id = OLD.id;
+      END;
+
+      CREATE TRIGGER trg_entity_delete_links AFTER DELETE ON entities
+      BEGIN
+        DELETE FROM tag_links   WHERE target_type = 'entity' AND target_id = OLD.id;
+        DELETE FROM event_links WHERE target_type = 'entity' AND target_id = OLD.id;
+        DELETE FROM tasks       WHERE target_type = 'entity' AND target_id = OLD.id;
+      END;
+
+      CREATE TRIGGER trg_property_delete_links AFTER DELETE ON properties
+      BEGIN
+        DELETE FROM tag_links   WHERE target_type = 'property' AND target_id = OLD.id;
+        DELETE FROM event_links WHERE target_type = 'property' AND target_id = OLD.id;
+        DELETE FROM tasks       WHERE target_type = 'property' AND target_id = OLD.id;
+      END;
+    `)
+
+    database.prepare('INSERT INTO migrations (name) VALUES (?)').run('015_polymorphic_tasks')
+    console.log('Migration 015_polymorphic_tasks completed')
+  }
 }

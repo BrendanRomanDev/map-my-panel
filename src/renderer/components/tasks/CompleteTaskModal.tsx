@@ -1,14 +1,13 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import type { TaskWithEntity } from '@shared/types'
+import type { TaskWithTarget } from '@shared/types'
 import { useTags } from '../../hooks/useTags'
 import { queryKeys } from '../../lib/queryKeys'
 import { tagColorClasses } from '../tags/tagColors'
 
 interface CompleteTaskModalProps {
-  task: TaskWithEntity
+  task: TaskWithTarget
   propertyId: string
-  panelId: string
   onClose: () => void
   onDone: () => void
 }
@@ -16,8 +15,8 @@ interface CompleteTaskModalProps {
 // Guided completion driven entirely by the task's stored rules — no hardcoded
 // task-type branches. Shows exactly which tags will flip and lets the user
 // confirm/skip each side-effect before applying. The backend applies the
-// confirmed subset in one transaction (completeWithRules).
-export function CompleteTaskModal({ task, propertyId, panelId, onClose, onDone }: CompleteTaskModalProps) {
+// confirmed subset (to the task's own target) in one transaction.
+export function CompleteTaskModal({ task, propertyId, onClose, onDone }: CompleteTaskModalProps) {
   const queryClient = useQueryClient()
   const { data: allTags } = useTags(propertyId)
   const tags = allTags || []
@@ -53,11 +52,12 @@ export function CompleteTaskModal({ task, propertyId, panelId, onClose, onDone }
         logHistory,
         historyNote: historyNote.trim() || task.title
       })
-      queryClient.invalidateQueries({ queryKey: queryKeys.tags.byTarget('entity', task.entity_id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.tags.byTarget(task.target_type, task.target_id) })
       queryClient.invalidateQueries({ queryKey: ['tags'] })
       queryClient.invalidateQueries({ queryKey: ['history'] })
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
-      queryClient.invalidateQueries({ queryKey: queryKeys.entities.byPanel(panelId) })
+      queryClient.invalidateQueries({ queryKey: ['entities'] })
+      queryClient.invalidateQueries({ queryKey: ['breakers'] })
       onDone()
     } finally {
       setSaving(false)
@@ -69,7 +69,14 @@ export function CompleteTaskModal({ task, propertyId, panelId, onClose, onDone }
       <div className="bg-background border border-border rounded-lg max-w-md w-full max-h-[85vh] flex flex-col">
         <div className="flex-shrink-0 p-6 pb-3 border-b border-border">
           <h3 className="text-lg font-bold">Complete task</h3>
-          <p className="text-sm text-muted-foreground mt-1">{task.title} — {task.entity_name}</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {task.title} — {task.target_label}
+            {task.target_amperage != null && (
+              <span className="ml-1.5 inline-block px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 text-xs font-medium align-middle">
+                {task.target_amperage}A
+              </span>
+            )}
+          </p>
         </div>
 
         <div className="flex-1 overflow-auto p-6 py-4 space-y-3">
@@ -77,7 +84,7 @@ export function CompleteTaskModal({ task, propertyId, panelId, onClose, onDone }
             <label className="flex items-start gap-2 text-sm">
               <input type="checkbox" checked={applyTags} onChange={e => setApplyTags(e.target.checked)} className="mt-0.5" />
               <span className="space-y-1">
-                <span className="block">Apply tag changes to {task.entity_name}</span>
+                <span className="block">Apply tag changes to {task.target_label}</span>
                 {hasRemove && (
                   <span className="flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
                     Remove: {task.on_complete_remove_tag_ids.map(tagChip)}
