@@ -60,6 +60,11 @@ function breakerLabel(b: Breaker): string {
   return b.label || `Breaker ${b.position}${b.position_slot || ''}`
 }
 
+// Plural label for a target type (entity → entities, the rest just take 's').
+function pluralTargetType(type: TargetType): string {
+  return type === TARGET_TYPES.ENTITY ? 'entities' : `${type}s`
+}
+
 export function TasksView({ propertyId, panelId }: TasksViewProps) {
   const queryClient = useQueryClient()
   const { data: tasks } = useTasksForProperty(propertyId)
@@ -470,7 +475,7 @@ function TargetPicker({ propertyId, panelId, selected, onChange, showSelectAll =
         <div>
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm font-medium capitalize">
-              {type}s {selected.length > 0 && <span className="text-muted-foreground font-normal">({selected.length} selected)</span>}
+              {pluralTargetType(type)} {selected.length > 0 && <span className="text-muted-foreground font-normal">({selected.length} selected)</span>}
             </span>
             {showSelectAll && (
               <button type="button" onClick={toggleAll} disabled={filtered.length === 0} className="text-xs text-primary hover:underline disabled:opacity-40">
@@ -482,13 +487,13 @@ function TargetPicker({ propertyId, panelId, selected, onChange, showSelectAll =
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder={`Search ${type}s…`}
+              placeholder={`Search ${pluralTargetType(type)}…`}
               className="w-full mb-1 text-sm px-2 py-1.5 rounded border border-border bg-background"
             />
           )}
           <div className="max-h-40 overflow-auto border border-border rounded divide-y divide-border">
             {filtered.length === 0 ? (
-              <p className="px-2 py-3 text-xs text-muted-foreground">{q ? `No ${type}s match "${query}".` : `No ${type}s on this panel.`}</p>
+              <p className="px-2 py-3 text-xs text-muted-foreground">{q ? `No ${pluralTargetType(type)} match "${query}".` : `No ${pluralTargetType(type)} on this panel.`}</p>
             ) : (
               filtered.map(c => (
                 <label key={`${c.target_type}:${c.target_id}`} className="flex items-center gap-2 px-2 py-1.5 text-sm cursor-pointer hover:bg-muted">
