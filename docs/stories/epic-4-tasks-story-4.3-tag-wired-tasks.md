@@ -1,7 +1,7 @@
 # Story 4.3: Tag-Wired Tasks (rules, templates, bulk)
 
 **Epic:** 4 — Tasks
-**Status:** Approved (ready for dev)
+**Status:** ✅ Done (shipped 2026-06-29)
 **Refs:** `docs/prd/epic-4-tasks.md`
 
 ## Story
@@ -62,4 +62,21 @@ Behavior:
 - House style: single quotes, no semicolons. Additive migration only.
 
 ## Dev Agent Record
-_(to be filled by dev)_
+
+**Completed 2026-06-29.** All 8 ACs met.
+
+- **Migration 014** — `on_create_tag_id`, `on_complete_remove_tag_ids`,
+  `on_complete_add_tag_ids`, `on_complete_log_history` on `tasks`; `task_templates`
+  table. Additive.
+- **TaskRepository** — `create` honors `on_create_tag_id`; `completeWithRules`
+  applies remove/add + optional history in one transaction; template CRUD +
+  `createFromTemplate` (bulk). IPC + preload + `useTasks`/`useTaskTemplates` hooks.
+- **UI** — `TaskRulesEditor` (inline tag create w/ color+icon); AddTaskModal
+  (rules + save-as-template + bulk); CompleteTaskModal rewritten to rules-driven
+  (hardcoded self-ground branch removed); Templates strip + ApplyTemplateModal.
+- **Tests** — TaskRepository rules/templates + no-op safety (remove-missing /
+  add-duplicate). Commits `e913026` (backend), `5c964e4` (frontend).
+
+**Scope note:** delivery grew beyond the original 4.3 — polymorphic task targets,
+the grouped Tasks view, derived amperage, and the nav refactor were built on top.
+Those are recorded in **Story 4.4** (see `epic-4-tasks-story-4.4-*`).
