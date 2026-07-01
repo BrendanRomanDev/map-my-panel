@@ -23,6 +23,21 @@ interface MainLayoutProps {
 
 type GroupingType = 'room' | 'breaker'
 
+// Top-level views. 'panel' is home.
+export const MAIN_VIEWS = {
+  PANEL: 'panel',
+  TASKS: 'tasks',
+  HISTORY: 'history',
+  SETTINGS: 'settings'
+} as const
+export type MainView = (typeof MAIN_VIEWS)[keyof typeof MAIN_VIEWS]
+
+const VIEW_TITLES: Record<Exclude<MainView, 'panel'>, string> = {
+  tasks: 'Tasks',
+  history: 'Property History',
+  settings: 'Settings'
+}
+
 export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChange, onPanelReset }: MainLayoutProps) {
   const queryClient = useQueryClient()
 
@@ -31,9 +46,10 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
   const [entityTypeFilter, setEntityTypeFilter] = useState<string>('all')
   const [roomFilter, setRoomFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
-  const [showSettings, setShowSettings] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
-  const [showTasks, setShowTasks] = useState(false)
+  // Top-level navigation: 'panel' is home (the breaker grid). Each view is a
+  // first-class destination with its own nav icon — no "deselect to go home".
+  const [activeView, setActiveView] = useState<MainView>(MAIN_VIEWS.PANEL)
+  const isPanel = activeView === MAIN_VIEWS.PANEL
   const [showAddEntityModal, setShowAddEntityModal] = useState(false)
   const [showAddPanelModal, setShowAddPanelModal] = useState(false)
   const [showPropertyModal, setShowPropertyModal] = useState(false)
@@ -202,7 +218,7 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
       <header className="border-b border-border px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {!showSettings && !showHistory && !showTasks ? (
+            {isPanel ? (
               <div className="flex items-center gap-2">
                 {allProperties && allProperties.length > 1 && (
                   <button
@@ -224,82 +240,74 @@ export function MainLayout({ propertyId, panelId, onPropertyChange, onPanelChang
                   </button>
                 )}
               </div>
-            ) : showHistory ? (
-              <h1 className="text-xl font-bold">Property History</h1>
-            ) : showTasks ? (
-              <h1 className="text-xl font-bold">Tasks</h1>
             ) : (
-              <h1 className="text-xl font-bold">Settings</h1>
+              <h1 className="text-xl font-bold">{VIEW_TITLES[activeView]}</h1>
             )}
           </div>
-          <div className="flex items-center gap-4">
+          <nav className="flex items-center gap-4">
             <button
-              onClick={() => {
-                setShowTasks(!showTasks)
-                setShowHistory(false)
-                setShowSettings(false)
-              }}
-              className={`p-2 rounded-md transition-colors ${showTasks ? 'bg-muted' : 'hover:bg-muted'}`}
-              title={showTasks ? 'Back to Panel' : 'Tasks'}
+              onClick={() => setActiveView(MAIN_VIEWS.PANEL)}
+              className={`p-2 rounded-md transition-colors ${activeView === MAIN_VIEWS.PANEL ? 'bg-muted text-primary' : 'hover:bg-muted'}`}
+              title="Panel"
+              aria-current={activeView === MAIN_VIEWS.PANEL ? 'page' : undefined}
+            >
+              {/* home */}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h3a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1h3a1 1 0 001-1V10" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setActiveView(MAIN_VIEWS.TASKS)}
+              className={`p-2 rounded-md transition-colors ${activeView === MAIN_VIEWS.TASKS ? 'bg-muted text-primary' : 'hover:bg-muted'}`}
+              title="Tasks"
+              aria-current={activeView === MAIN_VIEWS.TASKS ? 'page' : undefined}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7l2 2 4-4" />
               </svg>
             </button>
             <button
-              onClick={() => {
-                setShowHistory(!showHistory)
-                setShowSettings(false)
-                setShowTasks(false)
-              }}
-              className={`p-2 rounded-md transition-colors ${showHistory ? 'bg-muted' : 'hover:bg-muted'}`}
-              title={showHistory ? 'Back to Panel' : 'Property History'}
+              onClick={() => setActiveView(MAIN_VIEWS.HISTORY)}
+              className={`p-2 rounded-md transition-colors ${activeView === MAIN_VIEWS.HISTORY ? 'bg-muted text-primary' : 'hover:bg-muted'}`}
+              title="Property History"
+              aria-current={activeView === MAIN_VIEWS.HISTORY ? 'page' : undefined}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
             <button
-              onClick={() => {
-                setShowSettings(!showSettings)
-                setShowHistory(false)
-                setShowTasks(false)
-              }}
-              className="p-2 hover:bg-muted rounded-md transition-colors"
-              title={showSettings ? 'Back to Panel' : 'Settings'}
+              onClick={() => setActiveView(MAIN_VIEWS.SETTINGS)}
+              className={`p-2 rounded-md transition-colors ${activeView === MAIN_VIEWS.SETTINGS ? 'bg-muted text-primary' : 'hover:bg-muted'}`}
+              title="Settings"
+              aria-current={activeView === MAIN_VIEWS.SETTINGS ? 'page' : undefined}
             >
-              {showSettings ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              )}
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
             </button>
-          </div>
+          </nav>
         </div>
       </header>
 
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden" onClick={() => setSelectedEntityId(null)}>
-        {showTasks ? (
+        {activeView === MAIN_VIEWS.TASKS ? (
           /* Tasks View - Full Width */
           <div className="flex-1 p-6 overflow-auto">
             <div className="max-w-3xl mx-auto">
               <TasksView propertyId={property.id} panelId={panel.id} />
             </div>
           </div>
-        ) : showHistory ? (
+        ) : activeView === MAIN_VIEWS.HISTORY ? (
           /* Property History View - Full Width */
           <div className="flex-1 p-6 overflow-auto">
             <div className="max-w-3xl mx-auto">
               <PropertyHistoryView propertyId={property.id} panelId={panel.id} />
             </div>
           </div>
-        ) : showSettings ? (
+        ) : activeView === MAIN_VIEWS.SETTINGS ? (
           /* Settings View - Full Width */
           <div className="flex-1 p-6 overflow-auto">
             <div className="max-w-2xl mx-auto">
