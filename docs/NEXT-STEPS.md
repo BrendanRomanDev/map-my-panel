@@ -18,7 +18,7 @@ _Handoff written 2026-07-01. Open this first when you return._
 ## The next story (teed up)
 
 **Story 4.5 — MCP Task Tools** (`docs/stories/epic-4-tasks-story-4.5-mcp-task-tools.md`)
-is written and **Ready for dev**. It's MCP wiring only (no data-layer work — the
+is written and **Approved** (BMad status = ready to implement). It's MCP wiring only (no data-layer work — the
 repository is already MCP-ready). Full tool set: list / create / complete / delete
 tasks + templates, so the Claude agent can create and close tag-wired tasks from
 your rules. This is the payoff of the whole Epic-4 build.

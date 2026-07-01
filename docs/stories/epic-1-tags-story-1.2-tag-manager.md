@@ -1,7 +1,7 @@
 # Story 1.2: Tag Manager (Settings) + Default Icons
 
 **Epic:** 1 — Tags
-**Status:** Done — Released v0.2.0
+**Status:** Done _(Released v0.2.0)_
 **Architecture ref:** `docs/architecture-tags-and-history.md`, `docs/front-end-spec-tags-and-history.md`
 
 ## Story

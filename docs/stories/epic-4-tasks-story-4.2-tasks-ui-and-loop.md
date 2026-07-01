@@ -1,7 +1,7 @@
 # Story 4.2: Tasks UI + Generate-from-Warnings + Confirmed Completion
 
 **Epic:** 4 — Tasks
-**Status:** Done — pending release
+**Status:** Done _(pending release)_
 
 ## Dev Agent Record
 

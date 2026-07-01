@@ -1,7 +1,7 @@
 # Story 2.2: History UI — Breaker Detail Timeline + Add/Edit
 
 **Epic:** 2 — History Events
-**Status:** Done — Released v0.2.0
+**Status:** Done _(Released v0.2.0)_
 **Architecture ref:** `docs/front-end-spec-tags-and-history.md`
 
 ## Story

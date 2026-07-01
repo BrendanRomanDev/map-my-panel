@@ -1,7 +1,7 @@
 # Story 1.1: Tag Data Layer (Migration, Types, Repository, IPC)
 
 **Epic:** 1 — Tags
-**Status:** Done — Released v0.2.0
+**Status:** Done _(Released v0.2.0)_
 **Architecture ref:** `docs/architecture-tags-and-history.md`
 
 ## Story

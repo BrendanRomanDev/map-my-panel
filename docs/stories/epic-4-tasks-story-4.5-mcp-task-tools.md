@@ -1,7 +1,7 @@
 # Story 4.5: MCP Task Tools
 
 **Epic:** 4 — Tasks
-**Status:** 📋 Ready for dev (next up)
+**Status:** Approved _(ready for dev — next up)_
 **Refs:** `docs/prd/epic-4-tasks.md` (MCP follow-on), `mcp/README.md`, Stories 4.3/4.4
 
 ## Story

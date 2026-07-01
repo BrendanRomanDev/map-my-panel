@@ -1,7 +1,7 @@
 # Story 2.5: Panel-Scoped History Filter
 
 **Epic:** 2 — History Events
-**Status:** Done — ready for next build/release
+**Status:** Done _(pending release)_
 **Refs:** FEATURE_REQUESTS #0; `docs/prd/epic-1-2-tags-history.md`
 
 ## Story

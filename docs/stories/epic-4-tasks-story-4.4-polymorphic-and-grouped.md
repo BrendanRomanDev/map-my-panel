@@ -1,7 +1,7 @@
 # Story 4.4: Polymorphic Tasks + Grouped View (+ nav, amperage)
 
 **Epic:** 4 — Tasks
-**Status:** ✅ Done (shipped 2026-06-30)
+**Status:** Done _(shipped 2026-06-30)_
 **Refs:** `docs/prd/epic-4-tasks.md`, builds on Story 4.3
 
 ## Story

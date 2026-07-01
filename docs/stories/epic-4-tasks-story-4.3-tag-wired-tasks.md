@@ -1,7 +1,7 @@
 # Story 4.3: Tag-Wired Tasks (rules, templates, bulk)
 
 **Epic:** 4 — Tasks
-**Status:** ✅ Done (shipped 2026-06-29)
+**Status:** Done _(shipped 2026-06-29)_
 **Refs:** `docs/prd/epic-4-tasks.md`
 
 ## Story
