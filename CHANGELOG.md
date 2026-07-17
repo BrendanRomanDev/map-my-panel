@@ -2,6 +2,25 @@
 
 All notable changes to Map My Panel are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-07-17
+
+Grows the Tasks system into a real punch-list and fixes dark-theme visibility.
+
+### Added
+
+- **Grouped Tasks view** — the Tasks tab can now be grouped Flat, By Room, or By Breaker, so you can work the list however makes sense for the job in front of you.
+- **Tag-wired tasks** — tasks connect to the tag system, target any thing in the panel (entity, breaker, room), and derive amperage where it applies.
+- **Bulk selection in Suggested Tasks** — select all / deselect all when turning suggestions into tasks. (The old "Generate from warnings" flow is now **Suggested Tasks**, and suggestions come from objective panel facts rather than hardcoded tags.)
+
+### Changed
+
+- **Navigation** — going home vs. viewing a panel is now an explicit choice instead of "deselect to return," which was easy to trigger by accident.
+
+### Fixed
+
+- **Dark-theme inputs** — text inputs in Settings (property/panel/room/type names, the delete-confirm fields) rendered white-on-white in dark themes, making the text nearly invisible. They now use the themed background like every other input.
+- **Sticky modal footers** — the Add/Edit History Event modals kept their action buttons inside the scroll area, so on tall content you had to scroll to reach Save/Cancel/Delete. Footers (and the history-viewer close button) now stay pinned.
+
 ## [0.3.0] — 2026-06-29
 
 Adds a Tasks punch-list and panel-scoped history filtering.
