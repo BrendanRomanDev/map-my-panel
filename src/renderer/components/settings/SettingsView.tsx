@@ -920,7 +920,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
                               if (e.key === 'Escape') { setEditingPropertyId(null); setEditingPropertyName('') }
                             }}
                             autoFocus
-                            className="w-full px-2 py-1 border border-border rounded text-sm"
+                            className="w-full px-2 py-1 border border-border rounded text-sm bg-background"
                           />
                         </div>
                         <div className="flex gap-1">
@@ -1012,7 +1012,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
                     if (e.key === 'Escape') { setEditingPanelId(null); setEditingPanelName('') }
                   }}
                   autoFocus
-                  className="flex-1 px-3 py-2 border border-border rounded text-base font-semibold"
+                  className="flex-1 px-3 py-2 border border-border rounded text-base font-semibold bg-background"
                 />
                 <button
                   onClick={handleRenamePanel}
@@ -1179,7 +1179,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
                           if (e.key === 'Escape') { setEditingRoom(null); setNewRoomName('') }
                         }}
                         autoFocus
-                        className="flex-1 px-2 py-1 border border-border rounded text-sm"
+                        className="flex-1 px-2 py-1 border border-border rounded text-sm bg-background"
                       />
                       <div className="flex gap-1 ml-2">
                         <button
@@ -1321,7 +1321,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
                             if (e.key === 'Escape') { setEditingType(null); setNewTypeNameEdit('') }
                           }}
                           autoFocus
-                          className="flex-1 px-2 py-1 border border-border rounded text-sm"
+                          className="flex-1 px-2 py-1 border border-border rounded text-sm bg-background"
                         />
                         <div className="flex gap-1 ml-2">
                           <button
@@ -1380,7 +1380,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
                   }}
                   placeholder="Enter new type name"
                   autoFocus
-                  className="flex-1 px-2 py-1 border border-border rounded text-sm"
+                  className="flex-1 px-2 py-1 border border-border rounded text-sm bg-background"
                 />
                 <button
                   onClick={handleAddNewType}
@@ -1527,7 +1527,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
               onChange={(e) => setConfirmText(e.target.value)}
               placeholder={`Type "${panel.name}" to confirm`}
               autoFocus
-              className="w-full px-3 py-2 border border-border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-destructive"
+              className="w-full px-3 py-2 border border-border rounded-md mb-4 bg-background focus:outline-none focus:ring-2 focus:ring-destructive"
             />
             <div className="flex gap-2 justify-end">
               <button
@@ -1736,7 +1736,7 @@ export function SettingsView({ propertyId, panelId, onReset, onPropertyChange }:
               onChange={(e) => setDeletePanelConfirmText(e.target.value)}
               placeholder={`Type "${panel.name}" to confirm`}
               autoFocus
-              className="w-full px-3 py-2 border border-border rounded-md mb-4 focus:outline-none focus:ring-2 focus:ring-destructive"
+              className="w-full px-3 py-2 border border-border rounded-md mb-4 bg-background focus:outline-none focus:ring-2 focus:ring-destructive"
             />
             <div className="flex gap-2 justify-end">
               <button

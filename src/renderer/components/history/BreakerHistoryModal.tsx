@@ -26,32 +26,34 @@ export function BreakerHistoryModal({ breaker, onClose }: BreakerHistoryModalPro
       onClick={onClose}
     >
       <div
-        className="bg-background border border-border rounded-lg p-6 max-w-lg w-full max-h-[85vh] overflow-auto"
+        className="bg-background border border-border rounded-lg max-w-lg w-full max-h-[85vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex-shrink-0 flex items-center justify-between p-6 pb-4 border-b border-border">
           <h3 className="text-lg font-bold">{label} — History</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             ✕
           </button>
         </div>
-        {panel && (
-          <HistorySection
-            targetType="breaker"
-            targetId={breaker.id}
-            propertyId={panel.property_id}
-            panelId={breaker.panel_id}
-            targetLabel={label}
-            // Linked (double-pole) breaker: pre-check the linked half so events
-            // apply to both. Keyed off the link itself, not breaker_type, since
-            // that's the source of truth for the pairing.
-            extraInitialTargets={
-              breaker.linked_breaker_id
-                ? [{ target_type: 'breaker', target_id: breaker.linked_breaker_id }]
-                : []
-            }
-          />
-        )}
+        <div className="flex-1 overflow-auto p-6">
+          {panel && (
+            <HistorySection
+              targetType="breaker"
+              targetId={breaker.id}
+              propertyId={panel.property_id}
+              panelId={breaker.panel_id}
+              targetLabel={label}
+              // Linked (double-pole) breaker: pre-check the linked half so events
+              // apply to both. Keyed off the link itself, not breaker_type, since
+              // that's the source of truth for the pairing.
+              extraInitialTargets={
+                breaker.linked_breaker_id
+                  ? [{ target_type: 'breaker', target_id: breaker.linked_breaker_id }]
+                  : []
+              }
+            />
+          )}
+        </div>
       </div>
     </div>
   )

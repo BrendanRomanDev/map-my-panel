@@ -93,10 +93,10 @@ export function EditEventModal({ event, propertyId, panelId, onClose }: EditEven
 
   return (
     <div className="fixed inset-0 bg-black/70 z-[60] flex items-center justify-center p-4">
-      <div className="bg-background border border-border rounded-lg p-6 max-w-lg w-full max-h-[90vh] overflow-auto">
-        <h3 className="text-lg font-bold mb-4">Edit History Event</h3>
+      <div className="bg-background border border-border rounded-lg max-w-lg w-full max-h-[90vh] flex flex-col">
+        <h3 className="flex-shrink-0 text-lg font-bold p-6 pb-4">Edit History Event</h3>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-auto px-6 space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Event Type</label>
             <select
@@ -161,7 +161,7 @@ export function EditEventModal({ event, propertyId, panelId, onClose }: EditEven
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-6">
+        <div className="flex-shrink-0 flex items-center justify-between p-6 pt-4 border-t border-border">
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="text-sm px-3 py-1.5 rounded text-destructive hover:bg-destructive/10"
